@@ -119,7 +119,7 @@ mod tests {
                 Err(e) => println!("do err:{}", e),
                 Ok(res) => {
                     println!("res code:{}", res.get_code());
-                    if let Some(bs) = res.get_bodys() {
+                    if let Some(bs) = res.get_bodys(None).await {
                         println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
                     }
                 }

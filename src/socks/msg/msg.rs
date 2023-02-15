@@ -13,6 +13,7 @@ pub struct Message {
     pub cmds: String,
     pub heads: Option<Box<[u8]>>,
     pub bodys: Option<Box<[u8]>>,
+    pub bodybuf: Option<bytes::ByteBoxBuf>,
 }
 impl Message {
     pub fn new() -> Self {
@@ -22,10 +23,14 @@ impl Message {
             cmds: String::new(),
             heads: None,
             bodys: None,
+            bodybuf: None,
         }
     }
     pub fn own_bodys(&mut self) -> Option<Box<[u8]>> {
         std::mem::replace(&mut self.bodys, None)
+    }
+    pub fn own_bodybuf(&mut self) -> Option<bytes::ByteBoxBuf> {
+        std::mem::replace(&mut self.bodybuf, None)
     }
 }
 
