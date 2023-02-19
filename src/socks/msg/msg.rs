@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ruisutil::bytes;
 
 pub struct Messages {
@@ -5,7 +7,7 @@ pub struct Messages {
     pub cmds: Option<String>,
     pub heads: Option<Box<[u8]>>,
     pub bodys: Option<Box<[u8]>>,
-    pub bodybuf: Option<bytes::ByteBoxBuf>,
+    pub bodybuf: Option<Arc<bytes::ByteBoxBuf>>,
 }
 pub struct Message {
     pub version: u16,

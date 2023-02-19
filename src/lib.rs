@@ -6,11 +6,7 @@ extern crate ruisutil;
 extern crate serde;
 extern crate serde_json;
 
-use std::{
-    collections::{HashMap, LinkedList},
-    io,
-    time::Duration,
-};
+use std::{collections::HashMap, io, time::Duration};
 
 use async_std::{
     net::{TcpListener, TcpStream},
@@ -178,7 +174,7 @@ struct Inner {
     ctx: ruisutil::Context,
     lmt_tm: LmtTmConfig,
     lmt_max: LmtMaxConfig,
-    fns: RwLock<HashMap<i32, LinkedList<AsyncFnPtr>>>,
+    fns: RwLock<HashMap<i32, Vec<AsyncFnPtr>>>,
     lmts: RwLock<HashMap<i32, LmtMaxConfig>>,
     addr: String,
     lsr: Option<TcpListener>,
@@ -226,7 +222,6 @@ impl Engine {
         }
     }
 
-    
     pub fn stop(&self) {
         unsafe { self.inner.muts().lsr = None };
         self.inner.ctx.stop();
@@ -277,7 +272,7 @@ impl Engine {
                     if let Some(ls) = lkv.get(&res.control()) {
                         let mut vs = Vec::with_capacity(ls.len());
                         let mut itr = ls.iter();
-                        while let Some(f) = itr.next() {
+                        for f in itr {
                             let fnc = &f.func;
                             vs.push(fnc(res.clone()))
                         }
@@ -324,10 +319,10 @@ impl Engine {
         {
             let mut lkv = self.inner.fns.write().await;
             if let Some(v) = lkv.get_mut(&control) {
-                v.push_back(fnc);
+                v.push(fnc);
             } else {
-                let mut v = LinkedList::new();
-                v.push_back(fnc);
+                let mut v = Vec::new();
+                v.push(fnc);
                 lkv.insert(control, v);
             }
         }
