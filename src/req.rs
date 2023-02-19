@@ -1,4 +1,9 @@
-use std::{io, mem, net::ToSocketAddrs, time::Duration};
+use std::{
+    io, mem,
+    net::ToSocketAddrs,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use async_std::prelude::*;
 use async_std::{net::TcpStream, sync::Mutex};
@@ -211,7 +216,7 @@ pub struct Inner {
     code: i32,
     heads: Option<ruisutil::bytes::ByteBox>,
     bodys: Option<ruisutil::bytes::ByteBox>,
-    bodyok: Mutex<bool>,
+    bodyok: AtomicBool,
     bodylen: usize,
 }
 impl<'a> Response {
@@ -222,7 +227,7 @@ impl<'a> Response {
                 code: 0,
                 heads: None,
                 bodys: None,
-                bodyok: Mutex::new(false),
+                bodyok: AtomicBool::new(false),
                 bodylen: byln,
             }),
         }
@@ -251,8 +256,7 @@ impl<'a> Response {
         &self,
         ctx: Option<ruisutil::Context>,
     ) -> &Option<ruisutil::bytes::ByteBox> {
-        let mut lkv = self.inner.bodyok.lock().await;
-        if !*lkv {
+        if !self.inner.bodyok.load(Ordering::SeqCst) {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
@@ -266,7 +270,7 @@ impl<'a> Response {
                     }
                 }
             }
-            *lkv = true
+            self.inner.bodyok.store(true, Ordering::SeqCst);
         }
         &self.inner.bodys
     }
