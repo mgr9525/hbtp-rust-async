@@ -288,7 +288,7 @@ impl Engine {
                             if let Err(e) = res
                                 .res_string(
                                     ResCodeErr,
-                                    format!("method return err:{:?}", e).as_str(),
+                                    format!("method return err:{}", e).as_str(),
                                 )
                                 .await
                             {
