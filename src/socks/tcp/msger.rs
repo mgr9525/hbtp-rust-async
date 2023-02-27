@@ -124,7 +124,7 @@ impl Messager {
     async fn run_read(&self) -> io::Result<()> {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
-            let mut buf = vec![0u8; 2048].into_boxed_slice();
+            let mut buf = vec![0u8; 4096].into_boxed_slice();
             let n = ins.conn.read(&mut buf).await?;
             if n <= 0 {
                 return Err(ruisutil::ioerr("read size=0 err!!", None));
