@@ -76,12 +76,21 @@ impl Messager {
         ins.conn.shutdown(std::net::Shutdown::Both)
     }
 
+    pub fn peer_addr(&self) -> io::Result<String> {
+        if self.inner.shuted {
+            return Err(ruisutil::ioerr("conn is shutdown", None));
+        }
+        let addr = self.inner.conn.peer_addr()?;
+        Ok(addr.to_string())
+    }
+
     pub async fn run(&self, servs: bool, is_stream_buf: bool) {
         self.inner.ctmout.reset();
         unsafe { self.inner.muts().is_serv = servs };
         let c = self.clone();
         task::spawn(async move {
             c.run_send().await;
+            c.inner.ctx.stop();
             println!("Messager run_send end!!");
         });
         if is_stream_buf {
