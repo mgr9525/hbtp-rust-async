@@ -207,7 +207,7 @@ impl Messager {
                     task::sleep(Duration::from_millis(200)).await;
                 }
                 Ok(v) => {
-                    println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
+                    // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
                     if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
                         println!("run_send send_msgs err:{}", e);
                         task::sleep(Duration::from_millis(10)).await;
