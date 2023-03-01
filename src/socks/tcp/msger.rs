@@ -72,6 +72,7 @@ impl Messager {
         let ins = unsafe { self.inner.muts() };
         ins.shuted = true;
         self.inner.ctx.stop();
+        self.inner.buf.close();
         self.inner.msgs_sx.close();
         ins.conn.shutdown(std::net::Shutdown::Both)
     }
