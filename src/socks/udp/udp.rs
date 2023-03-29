@@ -142,8 +142,8 @@ impl UMsgerServ {
             return Err(ruisutil::ioerr("packet token err!!!", None));
         }
 
-        /* println!("parse packet ctrl:{}", pckt.ctrl);
-        print!("datas:");
+        // println!("parse packet ctrl:{}", pckt.ctrl);
+        /* print!("datas:");
         ruisutil::print_hex(&pckt.data[..]);
         println!(";"); */
         /*
@@ -238,7 +238,7 @@ impl UMsgerServ {
     pub async fn send1bts(
         &self,
         data: bytes::ByteBox,
-        tks: Option<String>,
+        tks: &Option<String>,
         dist: Option<&SocketAddr>,
     ) -> io::Result<()> {
         if data.len() > 1200 {
@@ -258,7 +258,7 @@ impl UMsgerServ {
     pub async fn send1msg(
         &self,
         data: msg::Messageus,
-        tks: Option<String>,
+        tks: &Option<String>,
         dist: Option<&SocketAddr>,
     ) -> io::Result<()> {
         let datas = msg::udps::msg_fmts(data)?;
