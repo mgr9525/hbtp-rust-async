@@ -28,6 +28,7 @@ pub struct Request {
     use_version: u16,
 }
 impl Request {
+    const MINS: Duration = Duration::from_millis(100);
     pub fn new(addr: &str, control: i32) -> Self {
         Self {
             ctx: None,
@@ -60,7 +61,9 @@ impl Request {
         c
     }
     pub fn timeout(&mut self, ts: Duration) {
-        self.tmout = ts;
+        if ts > Self::MINS {
+            self.tmout = ts;
+        }
     }
     pub fn command(&mut self, s: &str) {
         self.cmds = String::from(s);
