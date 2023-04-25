@@ -112,8 +112,8 @@ impl UMsgerServ {
                 match conn.recv_from(&mut buf[..]).await {
                     Err(e) => {
                         println!("udp_msger recv err:{}", e);
-                        self.stop();
-                        async_std::task::sleep(Duration::from_millis(5)).await;
+                        // self.stop();
+                        // async_std::task::sleep(Duration::from_millis(5)).await;
                     }
                     Ok((n, src)) => {
                         // println!("udp_msger recv_from({}):{}", src.to_string().as_str(), n);
