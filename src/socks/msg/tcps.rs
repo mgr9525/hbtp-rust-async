@@ -130,7 +130,7 @@ pub async fn send_msg(
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
-    hds: Option<Box<[u8]>>,
+    hds: &Option<bytes::ByteBox>,
     bds: Option<&[u8]>,
 ) -> io::Result<()> {
     let mut info = MsgInfo::new();
@@ -140,7 +140,7 @@ pub async fn send_msg(
     if let Some(v) = &cmds {
         info.len_cmd = v.len() as u16;
     }
-    if let Some(v) = &hds {
+    if let Some(v) = hds {
         info.len_head = v.len() as u32;
     }
     if let Some(v) = &bds {
@@ -152,7 +152,7 @@ pub async fn send_msg(
     if let Some(v) = &cmds {
         ruisutil::tcp_write_async(ctxs, conn, v.as_bytes()).await?;
     }
-    if let Some(v) = &hds {
+    if let Some(v) = hds {
         ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {
@@ -168,11 +168,11 @@ pub async fn send_msgs(
     msg: Messages,
 ) -> io::Result<()> {
     if let Some(buf) = &msg.bodybuf {
-        send_msg_buf(ctxs, conn, msg.control, msg.cmds, msg.heads, Some(buf)).await
+        send_msg_buf(ctxs, conn, msg.control, msg.cmds, &msg.heads, Some(buf)).await
     } else if let Some(bds) = &msg.bodys {
-        send_msg(ctxs, conn, msg.control, msg.cmds, msg.heads, Some(&bds[..])).await
+        send_msg(ctxs, conn, msg.control, msg.cmds, &msg.heads, Some(&bds[..])).await
     } else {
-        send_msg(ctxs, conn, msg.control, msg.cmds, msg.heads, None).await
+        send_msg(ctxs, conn, msg.control, msg.cmds, &msg.heads, None).await
     }
 }
 pub async fn send_msg_buf(
@@ -180,7 +180,7 @@ pub async fn send_msg_buf(
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
-    hds: Option<Box<[u8]>>,
+    hds: &Option<bytes::ByteBox>,
     bds: Option<&bytes::ByteBoxBuf>,
 ) -> io::Result<()> {
     let mut info = MsgInfo::new();
@@ -190,7 +190,7 @@ pub async fn send_msg_buf(
     if let Some(v) = &cmds {
         info.len_cmd = v.len() as u16;
     }
-    if let Some(v) = &hds {
+    if let Some(v) = hds {
         info.len_head = v.len() as u32;
     }
     if let Some(v) = bds {
@@ -202,7 +202,7 @@ pub async fn send_msg_buf(
     if let Some(v) = &cmds {
         ruisutil::tcp_write_async(ctxs, conn, v.as_bytes()).await?;
     }
-    if let Some(v) = &hds {
+    if let Some(v) = hds {
         ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {

@@ -6,8 +6,8 @@ use ruisutil::bytes;
 pub struct Messages {
     pub control: i32,
     pub cmds: Option<String>,
-    pub heads: Option<Box<[u8]>>,
-    pub bodys: Option<Box<[u8]>>,
+    pub heads: Option<bytes::ByteBox>,
+    pub bodys: Option<bytes::ByteBox>,
     pub bodybuf: Option<Arc<bytes::ByteBoxBuf>>,
 }
 #[derive(Clone)]
