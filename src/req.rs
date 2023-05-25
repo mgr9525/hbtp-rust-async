@@ -39,7 +39,7 @@ impl Request {
             cmds: String::new(),
             args: None,
 
-            tmout: Duration::from_secs(5),
+            tmout: Duration::from_secs(50),
             lmt_tm: LmtTmConfig::default(),
             lmt_max: LmtMaxConfig::default(),
 
