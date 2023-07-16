@@ -80,13 +80,15 @@ mod tests {
 
     #[test]
     fn hbtp_server() {
-        let mut serv = Engine::new(None, "0.0.0.0:7030");
+        let serv = Engine::new(None, "0.0.0.0:7030");
         println!("hbtp serv start!!!");
         // let cb = move |ctx: &mut crate::Context| testFun(ctx);
         // let fun = Box::new(cb);
         // let func = |ctx| Box::pin(testFun(ctx));
-        serv.reg_fun(1, testFun, None);
-        task::block_on(Engine::run(serv));
+        task::block_on(async move {
+            serv.reg_fun(1, testFun, None).await;
+            Engine::run(serv).await
+        });
     }
     async fn testFun(c: crate::Context) -> std::io::Result<()> {
         println!(
@@ -113,7 +115,7 @@ mod tests {
             req.add_arg("hehe1", "123456789");
             match req.do_string(None, "dedededede").await {
                 Err(e) => println!("do err:{}", e),
-                Ok(res) => {
+                Ok(mut res) => {
                     println!("res code:{}", res.get_code());
                     if let Some(bs) = res.get_bodys(None).await {
                         println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
@@ -286,10 +288,7 @@ impl Engine {
                         }
                         if let Err(e) = ft.await {
                             if let Err(e) = res
-                                .res_string(
-                                    ResCodeErr,
-                                    format!("method return err:{}", e).as_str(),
-                                )
+                                .res_string(ResCodeErr, format!("method return err:{}", e).as_str())
                                 .await
                             {
                                 println!("res_string method err:{}", e.to_string().as_str());

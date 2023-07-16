@@ -55,7 +55,7 @@ impl<'a> Context {
         let ctxs = ruisutil::Context::with_timeout(Some(ctx.clone()), lmt_tm.tm_ohther);
         let bts = ruisutil::tcp_read_async(&ctxs, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
-        if info.version != 1 && info.version != 2 {
+        if info.version < 1 && info.version > 2 {
             return Err(ruisutil::ioerr("not found version!", None));
         }
         let cfg = egn.get_lmt_max(info.control).await;

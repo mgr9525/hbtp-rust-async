@@ -112,7 +112,7 @@ impl Request {
             args = v.to_string();
         }
         let mut reqs = MsgInfo::new();
-        reqs.version = 1;
+        reqs.version = 2;
         reqs.control = self.ctrl;
         reqs.len_cmd = self.cmds.len() as u16;
         reqs.len_arg = args.len() as u16;
@@ -158,14 +158,14 @@ impl Request {
         if (info.len_head) as u64 > self.lmt_max.max_heads {
             return Err(ruisutil::ioerr("bytes2 out limit!!", None));
         }
-        let rt = Response::new(info.len_body as usize);
-        let ins = unsafe { rt.inner.muts() };
-        ins.code = info.code;
+        let heads;
         let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_heads);
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
             let bts = ruisutil::tcp_read_async(&ctx, &mut conn, lnsz as usize).await?;
-            ins.heads = Some(ruisutil::bytes::ByteBox::from(bts));
+            heads = Some(ruisutil::bytes::ByteBox::from(bts));
+        } else {
+            heads = None;
         }
         /* let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
         let lnsz = info.len_body as usize;
@@ -173,8 +173,12 @@ impl Request {
             let bts = ruisutil::tcp_read_async(&ctx, &mut conn, lnsz as usize).await?;
             rt.bodys = Some(bts);
         } */
-        ins.conn = Some(conn);
-        Ok(rt)
+        Ok(Response::new(
+            conn,
+            info.code,
+            heads,
+            info.len_body as usize,
+        ))
     }
     pub async fn dors(&mut self, hds: Option<&[u8]>, bds: Option<&[u8]>) -> io::Result<Response> {
         let conn = self.send(hds, bds).await?;
@@ -209,6 +213,7 @@ impl Request {
     }
 }
 
+#[derive(Clone)]
 pub struct Response {
     inner: ruisutil::ArcMut<Inner>,
 }
@@ -223,7 +228,12 @@ pub struct Inner {
     bodylen: usize,
 }
 impl<'a> Response {
-    fn new(byln: usize) -> Self {
+    fn new(
+        conn: TcpStream,
+        code: i32,
+        heads: Option<ruisutil::bytes::ByteBox>,
+        byln: usize,
+    ) -> Self {
         Self {
             inner: ruisutil::ArcMut::new(Inner {
                 conn: None,
