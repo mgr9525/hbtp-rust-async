@@ -236,9 +236,9 @@ impl<'a> Response {
     ) -> Self {
         Self {
             inner: ruisutil::ArcMut::new(Inner {
-                conn: None,
-                code: 0,
-                heads: None,
+                conn: Some(conn),
+                code: code,
+                heads: heads,
                 bodys: None,
                 bodyok: AtomicBool::new(false),
                 bodylen: byln,
