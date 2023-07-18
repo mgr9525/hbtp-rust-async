@@ -15,6 +15,7 @@ use async_std::{
 use async_std::{prelude::*, sync::RwLock};
 use futures::future::{BoxFuture, Future};
 
+pub use qstring::QString;
 pub use req::Request;
 pub use req::Response;
 pub use res::Context;
@@ -115,7 +116,7 @@ mod tests {
             req.add_arg("hehe1", "123456789");
             match req.do_string(None, "dedededede").await {
                 Err(e) => println!("do err:{}", e),
-                Ok(mut res) => {
+                Ok(res) => {
                     println!("res code:{}", res.get_code());
                     if let Some(bs) = res.get_bodys(None).await {
                         println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
