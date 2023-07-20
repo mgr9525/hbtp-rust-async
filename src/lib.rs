@@ -1,10 +1,10 @@
 // extern crate proc_macro;
-extern crate async_std;
-extern crate futures;
-extern crate qstring;
-extern crate ruisutil;
-extern crate serde;
-extern crate serde_json;
+// extern crate async_std;
+// extern crate futures;
+// extern crate qstring;
+// extern crate ruisutil;
+// extern crate serde;
+// extern crate serde_json;
 
 use std::{collections::HashMap, io, time::Duration};
 
