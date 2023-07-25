@@ -135,10 +135,18 @@ impl<'a> Context {
         }
         panic!("conn?");
     }
-    pub fn peer_addr(&self) -> io::Result<String> {
+    pub fn local_addr(&self) -> io::Result<std::net::SocketAddr> {
+        if let Some(conn) = &self.inner.conn {
+            let addr = conn.local_addr()?;
+            Ok(addr)
+        } else {
+            Err(ruisutil::ioerr("can't get addr", None))
+        }
+    }
+    pub fn peer_addr(&self) -> io::Result<std::net::SocketAddr> {
         if let Some(conn) = &self.inner.conn {
             let addr = conn.peer_addr()?;
-            Ok(addr.to_string())
+            Ok(addr)
         } else {
             Err(ruisutil::ioerr("can't get addr", None))
         }
