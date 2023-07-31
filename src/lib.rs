@@ -126,6 +126,23 @@ mod tests {
         });
     }
     #[test]
+    fn hbtp_request_tmp() {
+        async_std::task::block_on(async {
+            let mut req = Request::new("192.168.1.7:7000", 1);
+            req.command("hello");
+            req.add_arg("hehe1", "123456789");
+            match req.do_string(None, "dedededede").await {
+                Err(e) => println!("do err:{}", e),
+                Ok(res) => {
+                    println!("res code:{}", res.get_code());
+                    if let Some(bs) = res.get_bodys(None).await {
+                        println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
+                    }
+                }
+            };
+        });
+    }
+    #[test]
     fn qstring_test() {
         let mut qs = QString::from("foo=bar");
         qs.add_pair(("haha", "hehe"));
