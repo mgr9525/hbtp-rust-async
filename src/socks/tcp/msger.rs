@@ -234,6 +234,7 @@ impl Messager {
                 bodys: None,
                 bodybuf: None,
             };
+            // self.inner.msgs_sx.try_send(msg);
             let c = self.clone();
             if let Err(e) = async_std::io::timeout(Duration::from_secs(3), async move {
                 c.inner
@@ -248,10 +249,10 @@ impl Messager {
             }
         }
 
-        let c = self.clone();
         // self.inner.recver.on_check().await;
+        let c = self.clone();
         let _ = async_std::io::timeout(Duration::from_secs(5), async move {
-            c.inner.recver.on_check();
+            c.inner.recver.on_check().await;
             Ok(())
         })
         .await;
