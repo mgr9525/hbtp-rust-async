@@ -6,7 +6,7 @@ use ruisutil::bytes::{ByteBox, ByteSteamBuf};
 
 use crate::socks::msg::{self, tcps};
 
-use super::{MessageRecv, Senders};
+use super::{Senders, TMessageRecv};
 
 #[derive(Clone)]
 pub struct Messager {
@@ -26,19 +26,16 @@ struct Inner {
 
     buf: ByteSteamBuf,
 
-    recver: Box<dyn MessageRecv + Send + Sync>,
+    recver: Box<TMessageRecv>,
 }
 
 impl Messager {
-    pub fn new<T>(
+    pub fn new(
         ctx: &ruisutil::Context,
         conn: TcpStream,
-        recver: T,
+        recver: Box<TMessageRecv>,
         sndbufln: usize,
-    ) -> (Self, Senders)
-    where
-        T: MessageRecv + Send + Sync + 'static,
-    {
+    ) -> (Self, Senders) {
         let (sx, rx) = if sndbufln > 0 {
             channel::bounded::<msg::Messages>(sndbufln)
         } else {
@@ -58,7 +55,7 @@ impl Messager {
 
                 buf: ByteSteamBuf::new(&ctx, 1024, Duration::from_millis(100)),
 
-                recver: Box::new(recver),
+                recver: recver,
             }),
         };
         (c, sx)
@@ -237,13 +234,27 @@ impl Messager {
                 bodys: None,
                 bodybuf: None,
             };
-            if let Err(e) = self.inner.msgs_sx.try_send(msg) {
-                println!("chan send err:{}", e);
+            let c = self.clone();
+            if let Err(e) = async_std::io::timeout(Duration::from_secs(3), async move {
+                c.inner
+                    .msgs_sx
+                    .send(msg)
+                    .await
+                    .map_err(|e| ruisutil::ioerr("send err", None))
+            })
+            .await
+            {
+                println!("msger run_check send heart err:{}", e);
             }
         }
 
-        // let rc = self.inner.recver.clone();
-        self.inner.recver.on_check().await;
+        let c = self.clone();
+        // self.inner.recver.on_check().await;
+        let _ = async_std::io::timeout(Duration::from_secs(5), async move {
+            c.inner.recver.on_check();
+            Ok(())
+        })
+        .await;
     }
 
     pub async fn send(&self, mv: msg::Messages) -> io::Result<()> {
