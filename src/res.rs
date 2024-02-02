@@ -239,6 +239,15 @@ impl<'a> Context {
             },
         }
     }
+    pub async fn body_str(&self) -> io::Result<String> {
+        match self.get_bodys(None).await {
+            None => Err(ruisutil::ioerr("bodys nil", None)),
+            Some(v) => match std::str::from_utf8(v) {
+                Ok(vs) => Ok(vs.to_string()),
+                Err(e) => Err(ruisutil::ioerr(e, None)),
+            },
+        }
+    }
 
     pub async fn response(
         &self,

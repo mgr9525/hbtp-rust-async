@@ -99,6 +99,9 @@ mod tests {
             c.command() == "hello",
             c.get_arg("hehe1").unwrap().as_str()
         );
+        if let Ok(bs) = c.body_str().await {
+            println!("req body data:{}", &bs)
+        }
         /* if let Some(v) = c.get() {
             let cs = v.read().await;
             cs.get_bodys();
@@ -118,8 +121,8 @@ mod tests {
                 Err(e) => println!("do err:{}", e),
                 Ok(res) => {
                     println!("res code:{}", res.get_code());
-                    if let Some(bs) = res.get_bodys(None).await {
-                        println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
+                    if let Ok(bs) = res.body_str().await {
+                        println!("res data:{}", &bs)
                     }
                 }
             };
