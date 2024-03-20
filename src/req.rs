@@ -317,4 +317,10 @@ impl<'a> Response {
             },
         }
     }
+    pub async fn body_strs<T: Into<String>>(&self, def: T) -> String {
+        match self.body_str().await {
+            Ok(vs) => vs,
+            Err(_) => def.into(),
+        }
+    }
 }
