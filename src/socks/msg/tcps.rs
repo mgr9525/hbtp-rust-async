@@ -206,7 +206,8 @@ pub async fn send_msg_buf(
         ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {
-        bytes::tcp_write_async(ctxs, conn, v).await?;
+        let bts=v.to_byte_box();
+        ruisutil::tcp_write_async(ctxs, conn, &bts).await?;
     }
     ruisutil::tcp_write_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
     Ok(())
