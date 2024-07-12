@@ -8,12 +8,12 @@
 
 use std::{collections::HashMap, io, time::Duration};
 
-use async_std::{
+use futures::future::{BoxFuture, Future};
+use ruisutil::asyncs::{
     net::{TcpListener, TcpStream},
+    sync::RwLock,
     task,
 };
-use async_std::{prelude::*, sync::RwLock};
-use futures::future::{BoxFuture, Future};
 
 pub use qstring::QString;
 pub use req::Request;
@@ -31,7 +31,7 @@ pub mod socks;
 mod tests {
     use std::{thread, time::Duration};
 
-    use async_std::task;
+    use ruisutil::asyncs::task;
 
     use qstring::QString;
 
@@ -86,7 +86,7 @@ mod tests {
         // let cb = move |ctx: &mut crate::Context| testFun(ctx);
         // let fun = Box::new(cb);
         // let func = |ctx| Box::pin(testFun(ctx));
-        task::block_on(async move {
+        ruisutil::asyncs::current_block_on(async move {
             serv.reg_fun(1, testFun, None).await;
             Engine::run(serv).await
         });
@@ -113,7 +113,7 @@ mod tests {
     }
     #[test]
     fn hbtp_request() {
-        async_std::task::block_on(async {
+        ruisutil::asyncs::current_block_on(async {
             let mut req = Request::new("localhost:7030", 1);
             req.command("hello");
             req.add_arg("hehe1", "123456789");
@@ -130,7 +130,7 @@ mod tests {
     }
     #[test]
     fn hbtp_request_tmp() {
-        async_std::task::block_on(async {
+        ruisutil::asyncs::current_block_on(async {
             let mut req = Request::new("192.168.1.7:7000", 1);
             req.command("hello");
             req.add_arg("hehe1", "123456789");
@@ -259,26 +259,25 @@ impl Engine {
 
         // self.runs().await;
         while !self.inner.ctx.done() {
-            task::sleep(Duration::from_millis(100)).await;
+            ruisutil::asyncs::sleep(Duration::from_millis(100)).await;
         }
         Ok(())
     }
     async fn runs(&self) {
         if let Some(lsr) = &self.inner.lsr {
-            let mut incom = lsr.incoming();
+            // let mut incom = lsr.accept();
             while !self.inner.ctx.done() {
-                match incom.next().await {
-                    None => break,
-                    Some(stream) => {
-                        if let Ok(conn) = stream {
-                            let c = self.clone();
-                            task::spawn(async move {
-                                c.run_cli(conn).await;
-                                // task::block_on(c.run_cli(conn));
-                            });
-                        } else {
-                            println!("stream conn err!!!!")
-                        }
+                match lsr.accept().await {
+                    Err(e) => {
+                        println!("stream conn err!!!!");
+                        break;
+                    }
+                    Ok((conn, _)) => {
+                        let c = self.clone();
+                        task::spawn(async move {
+                            c.run_cli(conn).await;
+                            // ruisutil::asyncs::current_block_on(c.run_cli(conn));
+                        });
                     }
                 }
             }

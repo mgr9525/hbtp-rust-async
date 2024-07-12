@@ -1,14 +1,14 @@
 mod msger;
 // mod msgbuf;
 
-use async_std::channel;
+use ruisutil::asyncs::Sender;
 pub use msger::Messager;
 // pub use msgbuf::MessagBuffer;
 
 use super::msg::{Message, Messages};
 use futures::future::BoxFuture;
 
-pub type Senders = channel::Sender<Messages>;
+pub type Senders = Sender<Messages>;
 
 pub trait MessageRecv {
     fn on_check(&self) -> BoxFuture<'static, ()>;

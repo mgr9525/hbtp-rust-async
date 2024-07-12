@@ -1,7 +1,6 @@
 use std::{collections::HashMap, io, net::SocketAddr, sync::Arc, time::Duration};
 
-use async_std::{
-    channel,
+use ruisutil::asyncs::{
     net::{ToSocketAddrs, UdpSocket},
     sync::RwLock,
 };
@@ -33,11 +32,6 @@ impl UMsgerServ {
     where
         T: IUMsgerServ + Send + Sync + 'static,
     {
-        /* let (sx, rx) = if sndbufln > 0 {
-            channel::bounded::<msg::Messages>(sndbufln)
-        } else {
-            channel::unbounded::<msg::Messages>()
-        }; */
         Self {
             inner: ruisutil::ArcMut::new(Inner {
                 ctx: ruisutil::Context::background(Some(ctx.clone())),
@@ -119,7 +113,7 @@ impl UMsgerServ {
                         // println!("udp_msger recv_from({}):{}", src.to_string().as_str(), n);
                         if n <= 1472 {
                             let c = self.clone();
-                            async_std::task::spawn(async move {
+                            ruisutil::asyncs::task::spawn(async move {
                                 let bts = bytes::ByteBox::new(Arc::new(buf), 0, n);
                                 if let Err(e) = c.run_parse(bts, src.clone()).await {
                                     println!("run_parse from {} err:{}", src.to_string(), e);

@@ -1,6 +1,6 @@
 use std::{io, net::SocketAddr, time::Duration};
 
-use async_std::sync::{Mutex, RwLock};
+use ruisutil::asyncs::sync::{Mutex, RwLock};
 use ruisutil::bytes;
 
 use super::udp::UMsgerServ;
@@ -41,7 +41,7 @@ impl UdpMsgParse {
     }
     pub async fn start(&self) {
         let c = self.clone();
-        async_std::task::spawn(async move {
+        ruisutil::asyncs::task::spawn(async move {
             c.run().await;
         });
     }
@@ -72,7 +72,7 @@ impl UdpMsgParse {
                     // send re
                 }
             }
-            async_std::task::sleep(Duration::from_millis(2)).await;
+            ruisutil::asyncs::sleep(Duration::from_millis(2)).await;
         }
         self.inner.prt.remove(&self.inner.addrs).await;
     }

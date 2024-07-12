@@ -1,7 +1,6 @@
 use std::{io, sync::Arc, time::Duration};
 
-use async_std::{channel, io::ReadExt, net::TcpStream, task};
-use futures::future::BoxFuture;
+use ruisutil::asyncs::{make_channel,AsyncReadExt, net::TcpStream, task, Receiver, Sender};
 use ruisutil::bytes::{ByteBox, ByteSteamBuf};
 
 use crate::socks::msg::{self, tcps};
@@ -21,8 +20,8 @@ struct Inner {
     //check
     ctms: ruisutil::Timer,
     ctmout: ruisutil::Timer,
-    msgs_sx: channel::Sender<msg::Messages>,
-    msgs_rx: channel::Receiver<msg::Messages>,
+    msgs_sx: Sender<msg::Messages>,
+    msgs_rx: Receiver<msg::Messages>,
 
     buf: ByteSteamBuf,
 
@@ -37,9 +36,9 @@ impl Messager {
         sndbufln: usize,
     ) -> (Self, Senders) {
         let (sx, rx) = if sndbufln > 0 {
-            channel::bounded::<msg::Messages>(sndbufln)
+            make_channel(sndbufln)
         } else {
-            channel::unbounded::<msg::Messages>()
+            make_channel(100)
         };
         let c = Self {
             inner: ruisutil::ArcMut::new(Inner {
@@ -70,8 +69,8 @@ impl Messager {
         ins.shuted = true;
         self.inner.ctx.stop();
         self.inner.buf.close();
-        self.inner.msgs_sx.close();
-        ins.conn.shutdown(std::net::Shutdown::Both)
+        ruisutil::asyncs::close_channel_snd(&self.inner.msgs_sx);
+        ruisutil::asyncs::tcp_shutdownw(&mut ins.conn)
     }
 
     pub async fn run(&self, servs: bool, is_stream_buf: bool) {
@@ -111,7 +110,7 @@ impl Messager {
         println!("Messager start run check");
         while !self.inner.ctx.done() {
             self.run_check().await;
-            task::sleep(Duration::from_millis(100)).await;
+            ruisutil::asyncs::sleep(Duration::from_millis(100)).await;
         }
         if let Err(e) = self.stop() {
             println!("Messager end stop err:{}", e);
@@ -123,7 +122,7 @@ impl Messager {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
             let mut buf = vec![0u8; 4096].into_boxed_slice();
-            let n = ins.conn.read(&mut buf).await?;
+            let n = ruisutil::fut_tmout_ctxend(&self.inner.ctx, 0, ins.conn.read(&mut buf)).await?;
             if n <= 0 {
                 return Err(ruisutil::ioerr("read size=0 err!!", None));
             }
@@ -168,7 +167,7 @@ impl Messager {
                         if e.kind() == io::ErrorKind::Interrupted {
                             // let _ = c.stop();
                             c.inner.ctx.stop();
-                            task::sleep(Duration::from_millis(200)).await;
+                            ruisutil::asyncs::sleep(Duration::from_millis(200)).await;
                         }
                     }
                 });
@@ -184,7 +183,7 @@ impl Messager {
                     println!("Messager parse_msg err:{:?}", e);
                     // let _ = self.stop();
                     self.inner.ctx.stop();
-                    task::sleep(Duration::from_millis(200)).await;
+                    ruisutil::asyncs::sleep(Duration::from_millis(200)).await;
                 }
                 Ok(v) => {
                     if let Err(e) = self.on_msg(v).await {
@@ -197,18 +196,19 @@ impl Messager {
     async fn run_send(&self) {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
-            match self.inner.msgs_rx.recv().await {
+            let fut = ruisutil::asyncs::channel_recv(&mut ins.msgs_rx);
+            match ruisutil::fut_tmout_ctxend(&self.inner.ctx, 0, fut).await {
                 Err(e) => {
                     println!("run_send chan recv err:{}", e);
                     // let _ = self.stop();
                     self.inner.ctx.stop();
-                    task::sleep(Duration::from_millis(200)).await;
+                    ruisutil::asyncs::sleep(Duration::from_millis(200)).await;
                 }
                 Ok(v) => {
                     // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
                     if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
                         println!("run_send send_msgs err:{}", e);
-                        task::sleep(Duration::from_millis(10)).await;
+                        ruisutil::asyncs::sleep(Duration::from_millis(10)).await;
                     }
                 }
             }
@@ -236,7 +236,7 @@ impl Messager {
             };
             // self.inner.msgs_sx.try_send(msg);
             let c = self.clone();
-            if let Err(e) = async_std::io::timeout(Duration::from_secs(3), async move {
+            if let Err(e) = ruisutil::asyncs::timeouts(Duration::from_secs(3), async move {
                 c.inner
                     .msgs_sx
                     .send(msg)
@@ -251,7 +251,7 @@ impl Messager {
 
         // self.inner.recver.on_check().await;
         let c = self.clone();
-        let _ = async_std::io::timeout(Duration::from_secs(5), async move {
+        let _ = ruisutil::asyncs::timeouts(Duration::from_secs(5), async move {
             c.inner.recver.on_check().await;
             Ok(())
         })

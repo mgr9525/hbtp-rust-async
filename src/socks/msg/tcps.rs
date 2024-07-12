@@ -1,6 +1,6 @@
 use std::{io, mem};
 
-use async_std::net::TcpStream;
+use ruisutil::asyncs::net::TcpStream;
 use ruisutil::bytes::{self, ByteSteamBuf};
 
 use crate::socks::msg::entity::MsgInfo;

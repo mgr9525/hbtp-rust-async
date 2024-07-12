@@ -9,10 +9,20 @@ version = "0.1.0"
 # [lib]
 # proc-macro = true
 [dependencies]
-async-std = "1.*"
+# async-std = "1.*"
 futures = "0.3.*"
 serde = {version = "1.0.145", features = ["derive"]}
 serde_json = "1.0.86"
 qstring = {git="https://github.com/mgr9525/qstring.git", rev="1523f04f0e1b50e0b20239035a3027add2140497"}
+
+
+async-std = {version="1", optional = true}
+tokio = { version = "1", features = ["full"], optional = true }
 # ruisutil={git="https://github.com/mgr9525/rust-ruisutil.git", rev="2dfd958851c634ea59e020cedf49aba640efb270"}
-ruisutil={path="../rust-ruisutil",features=["asyncs"]}
+ruisutil={path="../rust-ruisutil",optional = true}
+
+
+[features]
+default=["asyncs"]
+asyncs=["async-std","ruisutil/asyncs"]
+tokios=["tokio","ruisutil/tokios"]
