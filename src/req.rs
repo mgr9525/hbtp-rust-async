@@ -147,25 +147,25 @@ impl Request {
         }
         let bts = ruisutil::struct2byte(&reqs);
         let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
-        ruisutil::tcp_write_async(&ctx, &mut conn, bts).await?;
+        ruisutil::write_all_async(&ctx, &mut conn, bts).await?;
         if reqs.version >= 2 {
-            ruisutil::tcp_write_async(&ctx, &mut conn, &[0x48, 0x42, 0x54, 0x50]).await?;
+            ruisutil::write_all_async(&ctx, &mut conn, &[0x48, 0x42, 0x54, 0x50]).await?;
         }
         if reqs.len_cmd > 0 {
             let bts = self.cmds.as_bytes();
-            ruisutil::tcp_write_async(&ctx, &mut conn, bts).await?;
+            ruisutil::write_all_async(&ctx, &mut conn, bts).await?;
         }
         if reqs.len_arg > 0 {
             let bts = args.as_bytes();
-            ruisutil::tcp_write_async(&ctx, &mut conn, bts).await?;
+            ruisutil::write_all_async(&ctx, &mut conn, bts).await?;
         }
         if let Some(v) = hds {
             let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_heads);
-            ruisutil::tcp_write_async(&ctx, &mut conn, v).await?;
+            ruisutil::write_all_async(&ctx, &mut conn, v).await?;
         }
         if let Some(v) = bds {
             let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_bodys);
-            ruisutil::tcp_write_async(&ctx, &mut conn, v).await?;
+            ruisutil::write_all_async(&ctx, &mut conn, v).await?;
         }
         Ok(conn)
     }
@@ -173,7 +173,7 @@ impl Request {
         let mut info = ResInfoV1::new();
         let infoln = mem::size_of::<ResInfoV1>();
         let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
-        let bts = ruisutil::tcp_read_async(&ctx, &mut conn, infoln).await?;
+        let bts = ruisutil::read_all_async(&ctx, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
         if (info.len_head) as u64 > self.lmt_max.max_heads {
             return Err(ruisutil::ioerr("bytes2 out limit!!", None));
@@ -182,7 +182,7 @@ impl Request {
         let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_heads);
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
-            let bts = ruisutil::tcp_read_async(&ctx, &mut conn, lnsz as usize).await?;
+            let bts = ruisutil::read_all_async(&ctx, &mut conn, lnsz as usize).await?;
             heads = Some(ruisutil::bytes::ByteBox::from(bts));
         } else {
             heads = None;
@@ -190,7 +190,7 @@ impl Request {
         /* let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
         let lnsz = info.len_body as usize;
         if lnsz > 0 {
-            let bts = ruisutil::tcp_read_async(&ctx, &mut conn, lnsz as usize).await?;
+            let bts = ruisutil::read_all_async(&ctx, &mut conn, lnsz as usize).await?;
             rt.bodys = Some(bts);
         } */
         Ok(Response::new(
@@ -297,7 +297,7 @@ impl<'a> Response {
                         None => ruisutil::Context::background(None),
                         Some(v) => v,
                     };
-                    match ruisutil::tcp_read_async(&ctxs, conn, self.inner.bodylen).await {
+                    match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
                         Ok(bts) => ins.bodys = Some(ruisutil::bytes::ByteBox::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
                     }

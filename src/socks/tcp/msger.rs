@@ -122,7 +122,7 @@ impl Messager {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
             let mut buf = vec![0u8; 4096].into_boxed_slice();
-            let n = ruisutil::fut_tmout_ctxend(&self.inner.ctx, 0, ins.conn.read(&mut buf)).await?;
+            let n = ruisutil::fut_tmout_ctxend0(&self.inner.ctx, ins.conn.read(&mut buf)).await?;
             if n <= 0 {
                 return Err(ruisutil::ioerr("read size=0 err!!", None));
             }
@@ -196,9 +196,8 @@ impl Messager {
     async fn run_send(&self) {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
-            match ruisutil::fut_tmout_ctxend(
+            match ruisutil::fut_tmout_ctxend0(
                 &self.inner.ctx,
-                0,
                 ruisutil::asyncs::channel_recv(&mut ins.msgs_rx),
             )
             .await

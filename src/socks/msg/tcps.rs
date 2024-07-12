@@ -8,14 +8,14 @@ use crate::socks::msg::entity::MsgInfo;
 use super::{Message, Messages};
 
 pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Result<Message> {
-    let bts = ruisutil::tcp_read_async(ctxs, conn, 1).await?;
+    let bts = ruisutil::read_all_async(ctxs, conn, 1).await?;
     if bts.len() < 1 || bts[0] != 0x8du8 {
         return Err(ruisutil::ioerr(
             format!("first byte err:{:?}", &bts[..]),
             None,
         ));
     }
-    let bts = ruisutil::tcp_read_async(ctxs, conn, 1).await?;
+    let bts = ruisutil::read_all_async(ctxs, conn, 1).await?;
     if bts.len() < 1 || bts[0] != 0x8fu8 {
         return Err(ruisutil::ioerr(
             format!("second byte err:{:?}", &bts[..]),
@@ -25,7 +25,7 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
 
     let mut info = MsgInfo::new();
     let infoln = mem::size_of::<MsgInfo>();
-    let bts = ruisutil::tcp_read_async(ctxs, conn, infoln).await?;
+    let bts = ruisutil::read_all_async(ctxs, conn, infoln).await?;
     ruisutil::byte2struct(&mut info, &bts[..])?;
     if (info.len_head) as u64 > super::MAX_HEADS {
         return Err(ruisutil::ioerr("bytes2 out limit!!", None));
@@ -39,7 +39,7 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
     rt.control = info.control;
     let lnsz = info.len_cmd as usize;
     if lnsz > 0 {
-        let bts = ruisutil::tcp_read_async(&ctxs, conn, lnsz).await?;
+        let bts = ruisutil::read_all_async(&ctxs, conn, lnsz).await?;
         rt.cmds = match std::str::from_utf8(&bts[..]) {
             Err(e) => return Err(ruisutil::ioerr("cmd err", None)),
             Ok(v) => String::from(v),
@@ -47,15 +47,15 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
     }
     let lnsz = info.len_head as usize;
     if lnsz > 0 {
-        let bts = ruisutil::tcp_read_async(&ctxs, conn, lnsz as usize).await?;
+        let bts = ruisutil::read_all_async(&ctxs, conn, lnsz as usize).await?;
         rt.heads = Some(bytes::ByteBox::from(bts));
     }
     let lnsz = info.len_body as usize;
     if lnsz > 0 {
-        let bts = ruisutil::tcp_read_async(&ctxs, conn, lnsz as usize).await?;
+        let bts = ruisutil::read_all_async(&ctxs, conn, lnsz as usize).await?;
         rt.bodys = Some(bytes::ByteBox::from(bts));
     }
-    let bts = ruisutil::tcp_read_async(ctxs, conn, 2).await?;
+    let bts = ruisutil::read_all_async(ctxs, conn, 2).await?;
     if bts.len() < 2 || bts[0] != 0x8eu8 || bts[1] != 0x8fu8 {
         return Err(ruisutil::ioerr(
             format!("end byte err:{:?}", &bts[..]),
@@ -146,19 +146,19 @@ pub async fn send_msg(
     if let Some(v) = &bds {
         info.len_body = v.len() as u32;
     }
-    ruisutil::tcp_write_async(ctxs, conn, &[0x8du8, 0x8fu8]).await?;
+    ruisutil::write_all_async(ctxs, conn, &[0x8du8, 0x8fu8]).await?;
     let bts = ruisutil::struct2byte(&info);
-    ruisutil::tcp_write_async(ctxs, conn, bts).await?;
+    ruisutil::write_all_async(ctxs, conn, bts).await?;
     if let Some(v) = &cmds {
-        ruisutil::tcp_write_async(ctxs, conn, v.as_bytes()).await?;
+        ruisutil::write_all_async(ctxs, conn, v.as_bytes()).await?;
     }
     if let Some(v) = hds {
-        ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
+        ruisutil::write_all_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {
-        ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
+        ruisutil::write_all_async(ctxs, conn, &v[..]).await?;
     }
-    ruisutil::tcp_write_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
+    ruisutil::write_all_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
     Ok(())
 }
 
@@ -196,19 +196,19 @@ pub async fn send_msg_buf(
     if let Some(v) = bds {
         info.len_body = v.len() as u32;
     }
-    ruisutil::tcp_write_async(ctxs, conn, &[0x8du8, 0x8fu8]).await?;
+    ruisutil::write_all_async(ctxs, conn, &[0x8du8, 0x8fu8]).await?;
     let bts = ruisutil::struct2byte(&info);
-    ruisutil::tcp_write_async(ctxs, conn, bts).await?;
+    ruisutil::write_all_async(ctxs, conn, bts).await?;
     if let Some(v) = &cmds {
-        ruisutil::tcp_write_async(ctxs, conn, v.as_bytes()).await?;
+        ruisutil::write_all_async(ctxs, conn, v.as_bytes()).await?;
     }
     if let Some(v) = hds {
-        ruisutil::tcp_write_async(ctxs, conn, &v[..]).await?;
+        ruisutil::write_all_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {
         let bts=v.to_byte_box();
-        ruisutil::tcp_write_async(ctxs, conn, &bts).await?;
+        ruisutil::write_all_async(ctxs, conn, &bts).await?;
     }
-    ruisutil::tcp_write_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
+    ruisutil::write_all_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
     Ok(())
 }
