@@ -1,6 +1,6 @@
 use std::{io, sync::Arc, time::Duration};
 
-use ruisutil::asyncs::{make_channel,AsyncReadExt, net::TcpStream, task, Receiver, Sender};
+use ruisutil::asyncs::{make_channel, net::TcpStream, task, AsyncReadExt, Receiver, Sender};
 use ruisutil::bytes::{ByteBox, ByteSteamBuf};
 
 use crate::socks::msg::{self, tcps};
@@ -196,8 +196,13 @@ impl Messager {
     async fn run_send(&self) {
         let ins = unsafe { self.inner.muts() };
         while !self.inner.ctx.done() {
-            let fut = ruisutil::asyncs::channel_recv(&mut ins.msgs_rx);
-            match ruisutil::fut_tmout_ctxend(&self.inner.ctx, 0, fut).await {
+            match ruisutil::fut_tmout_ctxend(
+                &self.inner.ctx,
+                0,
+                ruisutil::asyncs::channel_recv(&mut ins.msgs_rx),
+            )
+            .await
+            {
                 Err(e) => {
                     println!("run_send chan recv err:{}", e);
                     // let _ = self.stop();
