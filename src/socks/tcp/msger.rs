@@ -60,7 +60,7 @@ impl Messager {
         (c, sx)
     }
 
-    pub fn stop(&self) -> io::Result<()> {
+    pub async fn stop(&self) -> io::Result<()> {
         if self.inner.shuted {
             return Ok(());
         }
@@ -70,7 +70,7 @@ impl Messager {
         self.inner.ctx.stop();
         self.inner.buf.close();
         ruisutil::asyncs::close_channel_snd(&self.inner.msgs_sx);
-        ruisutil::asyncs::tcp_shutdownw(&mut ins.conn)
+        ruisutil::asyncs::tcp_shutdownw_ac(&mut ins.conn).await
     }
 
     pub async fn run(&self, servs: bool, is_stream_buf: bool) {
@@ -117,7 +117,7 @@ impl Messager {
             self.run_check().await;
             ruisutil::asyncs::sleep(Duration::from_millis(100)).await;
         }
-        if let Err(e) = self.stop() {
+        if let Err(e) = self.stop().await {
             println!("Messager end stop err:{}", e);
         }
         println!("Messager end run check");
