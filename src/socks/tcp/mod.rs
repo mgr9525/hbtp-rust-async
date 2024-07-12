@@ -6,7 +6,7 @@ pub use msger::Messager;
 // pub use msgbuf::MessagBuffer;
 
 use super::msg::{Message, Messages};
-use futures::future::BoxFuture;
+use ruisutil::asyncs::BoxFuture;
 
 pub type Senders = Sender<Messages>;
 

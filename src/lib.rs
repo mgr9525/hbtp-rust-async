@@ -1,6 +1,4 @@
 // extern crate proc_macro;
-// extern crate async_std;
-// extern crate futures;
 // extern crate qstring;
 // extern crate ruisutil;
 // extern crate serde;
@@ -8,7 +6,7 @@
 
 use std::{collections::HashMap, io, time::Duration};
 
-use futures::future::{BoxFuture, Future};
+use ruisutil::asyncs::{BoxFuture, Future};
 use ruisutil::asyncs::{
     net::{TcpListener, TcpStream},
     sync::RwLock,

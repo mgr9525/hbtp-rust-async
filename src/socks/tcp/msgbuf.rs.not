@@ -1,7 +1,7 @@
 use std::{io, time::Duration, sync::Arc};
 
 use ruisutil::asyncs::{channel, io::ReadExt, net::TcpStream, task};
-use futures::future::BoxFuture;
+use ruisutil::asyncs::BoxFuture;
 use ruisutil::bytes;
 
 use crate::socks::msg;

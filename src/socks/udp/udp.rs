@@ -4,7 +4,7 @@ use ruisutil::asyncs::{
     net::{ToSocketAddrs, UdpSocket},
     sync::RwLock,
 };
-use futures::future::BoxFuture;
+use ruisutil::asyncs::BoxFuture;
 use ruisutil::bytes;
 
 use crate::socks::msg;

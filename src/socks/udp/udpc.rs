@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use ruisutil::asyncs::net::UdpSocket;
-use futures::future::BoxFuture;
+use ruisutil::asyncs::BoxFuture;
 use ruisutil::bytes;
 
 #[derive(Clone)]
