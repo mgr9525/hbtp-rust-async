@@ -78,7 +78,9 @@ impl Messager {
         unsafe { self.inner.muts().is_serv = servs };
         let c = self.clone();
         task::spawn(async move {
-            c.run_send().await;
+            if let Err(e) = c.run_send().await {
+                println!("run_send err:{}", e);
+            }
             c.inner.ctx.stop();
             println!("Messager run_send end!!");
         });
@@ -87,24 +89,27 @@ impl Messager {
             task::spawn(async move {
                 if let Err(e) = c.run_read().await {
                     println!("run_read err:{}", e);
-                    c.inner.ctx.stop();
+                    // c.inner.ctx.stop();
                 }
+                c.inner.buf.close();
                 println!("Messager run_recv end!!");
             });
             let c = self.clone();
             task::spawn(async move {
                 if let Err(e) = c.run_parse().await {
                     println!("run_parse err:{}", e);
-                    c.inner.ctx.stop();
                 }
+                c.inner.ctx.stop();
                 println!("Messager run_recv end!!");
             });
         } else {
             let c = self.clone();
             task::spawn(async move {
-                c.run_recv().await;
-                println!("Messager run_recv end!!");
+                if let Err(e) = c.run_recv().await {
+                    println!("run_recv err:{}", e);
+                }
                 c.inner.ctx.stop();
+                println!("Messager run_recv end!!");
             });
         }
         println!("Messager start run check");
@@ -120,7 +125,7 @@ impl Messager {
 
     async fn run_read(&self) -> io::Result<()> {
         let ins = unsafe { self.inner.muts() };
-        while !self.inner.ctx.done() {
+        loop {
             let mut buf = vec![0u8; 4096].into_boxed_slice();
             let n = ruisutil::fut_tmout_ctxend0(&self.inner.ctx, ins.conn.read(&mut buf)).await?;
             if n <= 0 {
@@ -129,16 +134,14 @@ impl Messager {
             let bts = ByteBox::new(Arc::new(buf), 0, n);
             self.inner.buf.push(bts).await?;
         }
-        Ok(())
     }
     async fn run_parse(&self) -> io::Result<()> {
-        while !self.inner.ctx.done() {
-            let msg = tcps::parse_steam_msg(&self.inner.buf).await?;
-            if let Err(e) = self.on_msg(msg).await {
+        loop {
+            let v = tcps::parse_steam_msg(&self.inner.ctx, &self.inner.buf).await?;
+            if let Err(e) = self.on_msg(v).await {
                 println!("run_parse on_msg err:{}", e);
             }
         }
-        Ok(())
     }
     async fn on_msg(&self, msg: msg::Message) -> io::Result<()> {
         let ctrl = msg.control;
@@ -175,46 +178,27 @@ impl Messager {
         }
         Ok(())
     }
-    async fn run_recv(&self) {
+    async fn run_recv(&self) -> std::io::Result<()> {
         let ins = unsafe { self.inner.muts() };
-        while !self.inner.ctx.done() {
-            match msg::tcps::parse_msg(&self.inner.ctx, &mut ins.conn).await {
-                Err(e) => {
-                    println!("Messager parse_msg err:{:?}", e);
-                    // let _ = self.stop();
-                    self.inner.ctx.stop();
-                    ruisutil::asyncs::sleep(Duration::from_millis(200)).await;
-                }
-                Ok(v) => {
-                    if let Err(e) = self.on_msg(v).await {
-                        println!("run_recv on_msg err:{}", e);
-                    }
-                }
+        loop {
+            let v = msg::tcps::parse_msg(&self.inner.ctx, &mut ins.conn).await?;
+            if let Err(e) = self.on_msg(v).await {
+                println!("run_recv on_msg err:{}", e);
             }
         }
     }
-    async fn run_send(&self) {
+    async fn run_send(&self) -> std::io::Result<()> {
         let ins = unsafe { self.inner.muts() };
-        while !self.inner.ctx.done() {
-            match ruisutil::fut_tmout_ctxend0(
+        loop {
+            let v = ruisutil::fut_tmout_ctxend0(
                 &self.inner.ctx,
                 ruisutil::asyncs::channel_recv(&mut ins.msgs_rx),
             )
-            .await
-            {
-                Err(e) => {
-                    println!("run_send chan recv err:{}", e);
-                    // let _ = self.stop();
-                    self.inner.ctx.stop();
-                    ruisutil::asyncs::sleep(Duration::from_millis(200)).await;
-                }
-                Ok(v) => {
-                    // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
-                    if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
-                        println!("run_send send_msgs err:{}", e);
-                        ruisutil::asyncs::sleep(Duration::from_millis(10)).await;
-                    }
-                }
+            .await?;
+            // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
+            if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
+                println!("run_send send_msgs err:{}", e);
+                ruisutil::asyncs::sleep(Duration::from_millis(10)).await;
             }
         }
     }

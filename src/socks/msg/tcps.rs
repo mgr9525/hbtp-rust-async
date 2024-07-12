@@ -65,15 +65,15 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
 
     Ok(rt)
 }
-pub async fn parse_steam_msg(buf: &ByteSteamBuf) -> io::Result<Message> {
-    let bts = buf.pull_size(None, 1).await?.to_bytes();
+pub async fn parse_steam_msg(ctxs: &ruisutil::Context,buf: &ByteSteamBuf) -> io::Result<Message> {
+    let bts = buf.pull_size(Some(ctxs), 1).await?.to_bytes();
     if bts.len() < 1 || bts[0] != 0x8du8 {
         return Err(ruisutil::ioerr(
             format!("first byte err:{:?}", &bts[..]),
             None,
         ));
     }
-    let bts = buf.pull_size(None, 1).await?.to_bytes();
+    let bts = buf.pull_size(Some(ctxs), 1).await?.to_bytes();
     if bts.len() < 1 || bts[0] != 0x8fu8 {
         return Err(ruisutil::ioerr(
             format!("second byte err:{:?}", &bts[..]),
@@ -83,7 +83,7 @@ pub async fn parse_steam_msg(buf: &ByteSteamBuf) -> io::Result<Message> {
 
     let mut info = MsgInfo::new();
     let infoln = mem::size_of::<MsgInfo>();
-    let bts = buf.pull_size(None, infoln).await?.to_bytes();
+    let bts = buf.pull_size(Some(ctxs), infoln).await?.to_bytes();
     ruisutil::byte2struct(&mut info, &bts[..])?;
     if (info.len_head) as u64 > super::MAX_HEADS {
         return Err(ruisutil::ioerr("bytes2 out limit!!", None));
@@ -97,7 +97,7 @@ pub async fn parse_steam_msg(buf: &ByteSteamBuf) -> io::Result<Message> {
     rt.control = info.control;
     let lnsz = info.len_cmd as usize;
     if lnsz > 0 {
-        let bts = buf.pull_size(None, lnsz).await?.to_bytes();
+        let bts = buf.pull_size(Some(ctxs), lnsz).await?.to_bytes();
         rt.cmds = match std::str::from_utf8(&bts[..]) {
             Err(e) => return Err(ruisutil::ioerr("cmd err", None)),
             Ok(v) => String::from(v),
@@ -105,16 +105,16 @@ pub async fn parse_steam_msg(buf: &ByteSteamBuf) -> io::Result<Message> {
     }
     let lnsz = info.len_head as usize;
     if lnsz > 0 {
-        let bts = buf.pull_size(None, lnsz).await?.to_bytes();
+        let bts = buf.pull_size(Some(ctxs), lnsz).await?.to_bytes();
         rt.heads = Some(bytes::ByteBox::from(bts));
     }
     let lnsz = info.len_body as usize;
     if lnsz > 0 {
-        let bts = buf.pull_size(None, lnsz).await?;
+        let bts = buf.pull_size(Some(ctxs), lnsz).await?;
         // rt.bodys = Some(bts.to_bytes());
         rt.bodybuf = Some(bts);
     }
-    let bts = buf.pull_size(None, 2).await?.to_bytes();
+    let bts = buf.pull_size(Some(ctxs), 2).await?.to_bytes();
     if bts.len() < 2 || bts[0] != 0x8eu8 || bts[1] != 0x8fu8 {
         return Err(ruisutil::ioerr(
             format!("end byte err:{:?}", &bts[..]),
