@@ -5,8 +5,8 @@ use std::{
     time::Duration,
 };
 
-use ruisutil::asyncs::{net::TcpStream, sync::Mutex};
 use qstring::QString;
+use ruisutil::asyncs::{net::TcpStream, sync::Mutex};
 use serde::{Deserialize, Serialize};
 
 use crate::res::*;
@@ -46,21 +46,16 @@ impl Request {
         }
     }
     pub fn new_conn(conn: TcpStream, control: i32) -> Self {
-        Self {
-            ctx: None,
-            sended: false,
-            addr: String::new(),
-            conn: Some(conn),
-            ctrl: control,
-            cmds: String::new(),
-            args: None,
-
-            tmout: Duration::from_secs(50),
-            lmt_tm: LmtTmConfig::default(),
-            lmt_max: LmtMaxConfig::default(),
-
-            use_version: 0,
+        let mut rt = Self::new("", control);
+        let _ = rt.set_conn(conn);
+        rt
+    }
+    pub fn set_conn(&mut self, conn: TcpStream) -> std::io::Result<()> {
+        if self.sended {
+            return Err(ruisutil::ioerr("req is sended", None));
         }
+        self.conn = Some(conn);
+        Ok(())
     }
     pub fn set_use_version(&mut self, v: u16) {
         self.use_version = v;
@@ -121,7 +116,7 @@ impl Request {
                 .await?
         } else {
             let rst = std::mem::replace(&mut self.conn, None);
-            rst.unwrap()
+            rst.ok_or(ruisutil::ioerr("panic?", None))?
         };
         if self.sended {
             return Err(ruisutil::ioerr("already request!", None));
