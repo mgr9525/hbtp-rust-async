@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io, time::Duration};
 
-use ruisutil::asyncs::{net::TcpStream, sync::Mutex};
 use qstring::QString;
+use ruisutil::asyncs::{net::TcpStream, sync::Mutex};
 use serde::{Deserialize, Serialize};
 
 /* fn callfun(fun: &ConnFun, ctx: &mut Context) {
@@ -296,8 +296,8 @@ impl<'a> Context {
     pub async fn res_bytes(&self, code: i32, bds: &[u8]) -> io::Result<()> {
         self.response(code, None, Some(bds)).await
     }
-    pub async fn res_string(&self, code: i32, s: &str) -> io::Result<()> {
-        self.res_bytes(code, s.as_bytes()).await
+    pub async fn res_string<T: AsRef<[u8]>>(&self, code: i32, s: T) -> io::Result<()> {
+        self.res_bytes(code, s.as_ref()).await
     }
     pub async fn res_json<T: Serialize>(&self, code: i32, v: &T) -> io::Result<()> {
         match serde_json::to_string(v) {
