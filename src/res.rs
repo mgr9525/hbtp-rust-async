@@ -293,8 +293,8 @@ impl<'a> Context {
 
         Ok(())
     }
-    pub async fn res_bytes(&self, code: i32, bds: &[u8]) -> io::Result<()> {
-        self.response(code, None, Some(bds)).await
+    pub async fn res_bytes<T: AsRef<[u8]>>(&self, code: i32, bds: T) -> io::Result<()> {
+        self.response(code, None, Some(bds.as_ref())).await
     }
     pub async fn res_string<T: AsRef<[u8]>>(&self, code: i32, s: T) -> io::Result<()> {
         self.res_bytes(code, s.as_ref()).await
