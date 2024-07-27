@@ -194,15 +194,16 @@ impl<'a> Context {
     }
     pub async fn get_bodys(
         &self,
-        ctx: Option<ruisutil::Context>,
+        ctx: Option<&ruisutil::Context>,
     ) -> &Option<ruisutil::bytes::ByteBox> {
+        let ctxc = ruisutil::Context::background(None);
         let mut lkv = self.inner.bodyok.lock().await;
         if !*lkv {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
                     let ctxs = match ctx {
-                        None => ruisutil::Context::background(None),
+                        None => &ctxc,
                         Some(v) => v,
                     };
                     match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
