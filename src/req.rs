@@ -282,17 +282,18 @@ impl<'a> Response {
     }
     pub async fn get_bodys(
         &self,
-        ctx: Option<ruisutil::Context>,
+        ctx: Option<&ruisutil::Context>,
     ) -> &Option<ruisutil::bytes::ByteBox> {
         if !self.inner.bodyok.load(Ordering::SeqCst) {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
+                    let ctxc = ruisutil::Context::background(None);
                     let ctxs = match ctx {
-                        None => ruisutil::Context::background(None),
+                        None => &ctxc,
                         Some(v) => v,
                     };
-                    match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
+                    match ruisutil::read_all_async(ctxs, conn, self.inner.bodylen).await {
                         Ok(bts) => ins.bodys = Some(ruisutil::bytes::ByteBox::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
                     }

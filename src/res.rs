@@ -196,12 +196,12 @@ impl<'a> Context {
         &self,
         ctx: Option<&ruisutil::Context>,
     ) -> &Option<ruisutil::bytes::ByteBox> {
-        let ctxc = ruisutil::Context::background(None);
         let mut lkv = self.inner.bodyok.lock().await;
         if !*lkv {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
+                    let ctxc = ruisutil::Context::background(None);
                     let ctxs = match ctx {
                         None => &ctxc,
                         Some(v) => v,
