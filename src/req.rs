@@ -112,7 +112,7 @@ impl Request {
     }
     async fn send(&mut self, hds: Option<&[u8]>, bds: Option<&[u8]>) -> io::Result<TcpStream> {
         let mut conn = if self.conn.is_none() {
-            ruisutil::asyncs::timeoutios(self.tmout.clone(), TcpStream::connect(self.addr.as_str()))
+            ruisutil::asyncs::timeouts(self.tmout.clone(), TcpStream::connect(self.addr.as_str()))
                 .await?
         } else {
             let rst = std::mem::replace(&mut self.conn, None);
