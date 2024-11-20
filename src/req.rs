@@ -167,7 +167,7 @@ impl Request {
     async fn response(&self, mut conn: TcpStream) -> io::Result<Response> {
         let mut info = ResInfoV1::new();
         let infoln = mem::size_of::<ResInfoV1>();
-        let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
+        let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.tmout);
         let bts = ruisutil::read_all_async(&ctx, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
         if (info.len_head) as u64 > self.lmt_max.max_heads {
