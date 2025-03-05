@@ -79,6 +79,9 @@ impl Request {
     pub fn command(&mut self, s: &str) {
         self.cmds = String::from(s);
     }
+    pub fn get_command(&self) -> &String {
+        &self.cmds
+    }
     pub fn get_args<'a>(&'a self) -> Option<&'a QString> {
         if let Some(v) = &self.args {
             Some(v)
