@@ -29,8 +29,6 @@ pub mod socks;
 mod tests {
     use std::{thread, time::Duration};
 
-    use ruisutil::asyncs::task;
-
     use qstring::QString;
 
     use crate::{Engine, Request};
