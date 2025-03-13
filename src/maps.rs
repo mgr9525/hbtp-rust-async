@@ -37,7 +37,7 @@ impl JMaps {
         }
     }
 
-    pub fn get_strsr<T: AsRef<str>>(&self, key: T) -> String {
+    pub fn get_strs<T: AsRef<str>>(&self, key: T) -> String {
         self.get_str(key).unwrap_or_default()
     }
 
