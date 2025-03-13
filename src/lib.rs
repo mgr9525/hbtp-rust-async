@@ -6,12 +6,12 @@
 
 use std::{collections::HashMap, io, time::Duration};
 
-use ruisutil::asyncs::{BoxFuture, Future};
 use ruisutil::asyncs::{
     net::{TcpListener, TcpStream},
     sync::RwLock,
     task,
 };
+use ruisutil::asyncs::{BoxFuture, Future};
 
 pub use qstring::QString;
 pub use req::Request;
@@ -77,14 +77,16 @@ mod tests {
 
     #[test]
     fn hbtp_server() {
-        let serv = Engine::new(None, "0.0.0.0:7030");
+        let serv = Engine::new("0.0.0.0:7030");
         println!("hbtp serv start!!!");
         // let cb = move |ctx: &mut crate::Context| testFun(ctx);
         // let fun = Box::new(cb);
         // let func = |ctx| Box::pin(testFun(ctx));
-        ruisutil::asyncs::current_block_on(async move {
+        let _ = ruisutil::asyncs::current_block_on(async move {
             serv.reg_fun(1, testFun, None).await;
-            Engine::run(serv).await
+            if let Err(e) = serv.run().await {
+                println!("serv run err:{}", e);
+            }
         });
     }
     async fn testFun(c: crate::Context) -> std::io::Result<()> {
@@ -196,7 +198,6 @@ struct Inner {
     fns: RwLock<HashMap<i32, Vec<AsyncFnPtr>>>,
     lmts: RwLock<HashMap<i32, LmtMaxConfig>>,
     addr: String,
-    lsr: Option<TcpListener>,
 }
 // unsafe impl Send for Engine {}
 // unsafe impl Sync for Engine {}
@@ -204,20 +205,21 @@ struct Inner {
 // unsafe impl Sync for AsyncFnPtr {}
 impl Drop for Inner {
     fn drop(&mut self) {
-        self.lsr = None;
         self.ctx.stop();
         //self.lsr.
     }
 }
 impl Engine {
-    pub fn new(ctx: Option<ruisutil::Context>, addr: &str) -> Self {
+    pub fn new(addr: &str) -> Self {
+        Self::newctx(None, addr)
+    }
+    pub fn newctx(ctx: Option<ruisutil::Context>, addr: &str) -> Self {
         Self {
             inner: ruisutil::ArcMut::new(Inner {
                 ctx: ruisutil::Context::background(ctx),
                 fns: RwLock::new(HashMap::new()),
                 lmts: RwLock::new(HashMap::new()),
                 addr: String::from(addr),
-                lsr: None,
                 lmt_tm: LmtTmConfig::default(),
                 lmt_max: LmtMaxConfig::default(),
             }),
@@ -242,42 +244,26 @@ impl Engine {
     }
 
     pub fn stop(&self) {
-        unsafe { self.inner.muts().lsr = None };
         self.inner.ctx.stop();
     }
-    pub async fn run(self) -> io::Result<()> {
+    pub async fn run(&self) -> std::io::Result<()> {
         let lsr = TcpListener::bind(self.inner.addr.as_str()).await?;
-        unsafe { self.inner.muts().lsr = Some(lsr) };
-        let c = self.clone();
-        task::spawn(async move {
-            c.runs().await;
-        });
-
-        // self.runs().await;
+        // let mut incom = lsr.accept();
         while !self.inner.ctx.done() {
-            ruisutil::asyncs::sleep(Duration::from_millis(100)).await;
-        }
-        Ok(())
-    }
-    async fn runs(&self) {
-        if let Some(lsr) = &self.inner.lsr {
-            // let mut incom = lsr.accept();
-            while !self.inner.ctx.done() {
-                match lsr.accept().await {
-                    Err(e) => {
-                        println!("stream conn err!!!!");
-                        break;
-                    }
-                    Ok((conn, _)) => {
-                        let c = self.clone();
-                        task::spawn(async move {
-                            c.run_cli(conn).await;
-                            // ruisutil::asyncs::current_block_on(c.run_cli(conn));
-                        });
-                    }
+            match ruisutil::fut_tmout_ctxend0(&self.inner.ctx, lsr.accept()).await {
+                Err(e) => {
+                    println!("stream conn err:{}!!!!", e);
+                    break;
+                }
+                Ok((conn, _)) => {
+                    let c = self.clone();
+                    task::spawn(async move {
+                        c.run_cli(conn).await;
+                    });
                 }
             }
         }
+        Ok(())
     }
     async fn run_cli(self, conn: TcpStream) {
         match Context::parse_conn(&self.inner.ctx, &self, conn).await {

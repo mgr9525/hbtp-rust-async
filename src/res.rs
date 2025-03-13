@@ -44,7 +44,7 @@ impl<'a> Context {
         }
     }
 
-    pub async fn parse_conn(
+    pub(crate) async fn parse_conn(
         ctx: &ruisutil::Context,
         egn: &crate::Engine,
         mut conn: TcpStream,
