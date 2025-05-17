@@ -71,6 +71,14 @@ impl JMaps {
     pub fn to_string(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(&self.maps)
     }
+
+    pub fn from_mapv(v: serde_json::Value) -> Option<Self> {
+        if let serde_json::Value::Object(mp) = v {
+            Some(Self::from(mp))
+        } else {
+            None
+        }
+    }
 }
 
 impl AsRef<serde_json::Map<String, serde_json::Value>> for JMaps {
