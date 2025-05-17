@@ -1,4 +1,7 @@
-use std::{collections::HashMap, ops::Index};
+use std::{
+    collections::HashMap,
+    ops::{Deref, Index},
+};
 
 pub struct JMaps {
     pub(crate) maps: serde_json::Map<String, serde_json::Value>,
@@ -137,6 +140,13 @@ impl ArraJMap {
 impl From<Vec<serde_json::Map<String, serde_json::Value>>> for ArraJMap {
     fn from(ls: Vec<serde_json::Map<String, serde_json::Value>>) -> Self {
         Self { ls }
+    }
+}
+
+impl Deref for ArraJMap {
+    type Target = Vec<serde_json::Map<String, serde_json::Value>>;
+    fn deref(&self) -> &Self::Target {
+        &self.ls
     }
 }
 
