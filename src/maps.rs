@@ -1,9 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Index};
 
 pub struct JMaps {
     pub(crate) maps: serde_json::Map<String, serde_json::Value>,
 }
-
 impl JMaps {
     pub fn new() -> Self {
         Self {
@@ -117,3 +116,48 @@ impl From<HashMap<String, serde_json::Value>> for JMaps {
         Self::from_bts(maps).unwrap()
     }
 } */
+
+pub struct ArraJMap {
+    ls: Vec<serde_json::Map<String, serde_json::Value>>,
+}
+
+impl ArraJMap {
+    pub fn new() -> Self {
+        Self { ls: vec![] }
+    }
+    pub fn from_bts<T: AsRef<[u8]>>(bts: T) -> Result<Self, serde_json::Error> {
+        let ls: Vec<serde_json::Map<String, serde_json::Value>> =
+            serde_json::from_slice(bts.as_ref())?;
+        Ok(Self::from(ls))
+    }
+    pub fn to_string(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(&self.ls)
+    }
+}
+impl From<Vec<serde_json::Map<String, serde_json::Value>>> for ArraJMap {
+    fn from(ls: Vec<serde_json::Map<String, serde_json::Value>>) -> Self {
+        Self { ls }
+    }
+}
+
+pub struct ArraJMapIter {
+    inner: std::vec::IntoIter<serde_json::Map<String, serde_json::Value>>,
+}
+
+impl Iterator for ArraJMapIter {
+    type Item = JMaps;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|maps| JMaps { maps })
+    }
+}
+impl IntoIterator for ArraJMap {
+    type Item = JMaps;
+    type IntoIter = ArraJMapIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ArraJMapIter {
+            inner: self.ls.into_iter(),
+        }
+    }
+}

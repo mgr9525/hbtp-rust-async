@@ -13,16 +13,16 @@ use ruisutil::asyncs::{
 };
 use ruisutil::asyncs::{BoxFuture, Future};
 
+pub use maps::{ArraJMap, JMaps};
 pub use qstring::QString;
 pub use req::Request;
 pub use req::Response;
 pub use res::Context;
 pub use res::{LmtMaxConfig, LmtTmConfig};
-pub use maps::JMaps;
 
+mod maps;
 mod req;
 mod res;
-mod maps;
 
 pub mod socks;
 
@@ -159,6 +159,19 @@ mod tests {
             thread::sleep(Duration::from_millis(500));
         }
         println!("end!!!");
+    }
+    #[test]
+    fn arrmps() {
+        let ls = match crate::ArraJMap::from_bts(b"[{\"a\":1}]") {
+            Ok(ls) => ls,
+            Err(err) => {
+                println!("ArraJMap::from_bts err:{}", err);
+                return;
+            }
+        };
+        for it in ls {
+            println!("get it: a={}", it.get_i64s("a"));
+        }
     }
 }
 // type ConnFun = fn(res: &mut Context);
