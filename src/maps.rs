@@ -13,6 +13,9 @@ impl JMaps {
         }
     }
 
+    pub fn reps(self) -> serde_json::Map<String, serde_json::Value> {
+        self.maps
+    }
     pub fn vmut(&mut self) -> &mut serde_json::Map<String, serde_json::Value> {
         &mut self.maps
     }
@@ -81,6 +84,12 @@ impl JMaps {
     }
 }
 
+impl Deref for JMaps {
+    type Target = serde_json::Map<String, serde_json::Value>;
+    fn deref(&self) -> &Self::Target {
+        &self.maps
+    }
+}
 impl AsRef<serde_json::Map<String, serde_json::Value>> for JMaps {
     fn as_ref(&self) -> &serde_json::Map<String, serde_json::Value> {
         &self.maps
@@ -128,11 +137,11 @@ impl From<HashMap<String, serde_json::Value>> for JMaps {
     }
 } */
 
-pub struct ArraJMap {
+pub struct ArraJMaps {
     ls: Vec<serde_json::Map<String, serde_json::Value>>,
 }
 
-impl ArraJMap {
+impl ArraJMaps {
     pub fn new() -> Self {
         Self { ls: vec![] }
     }
@@ -145,36 +154,36 @@ impl ArraJMap {
         serde_json::to_string(&self.ls)
     }
 }
-impl From<Vec<serde_json::Map<String, serde_json::Value>>> for ArraJMap {
+impl From<Vec<serde_json::Map<String, serde_json::Value>>> for ArraJMaps {
     fn from(ls: Vec<serde_json::Map<String, serde_json::Value>>) -> Self {
         Self { ls }
     }
 }
 
-impl Deref for ArraJMap {
+impl Deref for ArraJMaps {
     type Target = Vec<serde_json::Map<String, serde_json::Value>>;
     fn deref(&self) -> &Self::Target {
         &self.ls
     }
 }
 
-pub struct ArraJMapIter {
+pub struct ArraJMapsIter {
     inner: std::vec::IntoIter<serde_json::Map<String, serde_json::Value>>,
 }
 
-impl Iterator for ArraJMapIter {
+impl Iterator for ArraJMapsIter {
     type Item = JMaps;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|maps| JMaps { maps })
     }
 }
-impl IntoIterator for ArraJMap {
+impl IntoIterator for ArraJMaps {
     type Item = JMaps;
-    type IntoIter = ArraJMapIter;
+    type IntoIter = ArraJMapsIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        ArraJMapIter {
+        ArraJMapsIter {
             inner: self.ls.into_iter(),
         }
     }

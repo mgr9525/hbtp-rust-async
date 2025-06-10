@@ -13,7 +13,7 @@ use ruisutil::asyncs::{
 };
 use ruisutil::asyncs::{BoxFuture, Future};
 
-pub use maps::{ArraJMap, JMaps};
+pub use maps::{ArraJMaps, JMaps};
 pub use qstring::QString;
 pub use req::Request;
 pub use req::Response;
@@ -162,10 +162,10 @@ mod tests {
     }
     #[test]
     fn arrmps() {
-        let ls = match crate::ArraJMap::from_bts(b"[{\"a\":1}]") {
+        let ls = match crate::ArraJMaps::from_bts(b"[{\"a\":1}]") {
             Ok(ls) => ls,
             Err(err) => {
-                println!("ArraJMap::from_bts err:{}", err);
+                println!("ArraJMaps::from_bts err:{}", err);
                 return;
             }
         };
