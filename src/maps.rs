@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    ops::{Deref, Index},
+    ops::{Deref, DerefMut, Index},
 };
 
 pub struct JMaps {
@@ -90,6 +90,11 @@ impl Deref for JMaps {
         &self.maps
     }
 }
+impl DerefMut for JMaps {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.maps
+    }
+}
 impl AsRef<serde_json::Map<String, serde_json::Value>> for JMaps {
     fn as_ref(&self) -> &serde_json::Map<String, serde_json::Value> {
         &self.maps
@@ -164,6 +169,11 @@ impl Deref for ArraJMaps {
     type Target = Vec<serde_json::Map<String, serde_json::Value>>;
     fn deref(&self) -> &Self::Target {
         &self.ls
+    }
+}
+impl DerefMut for ArraJMaps {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ls
     }
 }
 
