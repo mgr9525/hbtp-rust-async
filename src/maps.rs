@@ -43,6 +43,9 @@ impl<'a> JMaps<'a> {
         }
         rts
     }
+    pub fn repv(self) -> serde_json::Value {
+        serde_json::Value::Object(self.reps())
+    }
     pub fn vmut(&mut self) -> Result<&mut serde_json::Map<String, serde_json::Value>, JMapErr> {
         match self {
             JMaps::Own(maps) => Ok(maps),
