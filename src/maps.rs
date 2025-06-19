@@ -24,9 +24,25 @@ impl<'a> JMaps<'a> {
         Self::Own(serde_json::Map::new())
     }
 
-    /* pub fn reps(self) -> serde_json::Map<String, serde_json::Value> {
-        self.maps
-    } */
+    pub fn reps(self) -> serde_json::Map<String, serde_json::Value> {
+        let mut rts = serde_json::Map::new();
+        match self {
+            JMaps::Own(maps) => {
+                return maps;
+            }
+            JMaps::Brow(maps) => {
+                for (k, v) in maps {
+                    rts.insert(k.clone(), v.clone());
+                }
+            }
+            JMaps::BrowMut(maps) => {
+                for (k, v) in maps {
+                    rts.insert(k.clone(), v.clone());
+                }
+            }
+        }
+        rts
+    }
     pub fn vmut(&mut self) -> Result<&mut serde_json::Map<String, serde_json::Value>, JMapErr> {
         match self {
             JMaps::Own(maps) => Ok(maps),
