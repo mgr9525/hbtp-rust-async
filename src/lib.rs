@@ -169,7 +169,7 @@ mod tests {
                 return;
             }
         };
-        for it in ls {
+        for it in &ls {
             println!("get it: a={}", it.get_i64s("a"));
         }
     }
