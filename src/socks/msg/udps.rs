@@ -67,10 +67,10 @@ pub fn msg_parse(mut buf: bytes::ByteBox) -> io::Result<Messageu> {
     let infoln = mem::size_of::<MsgInfo>();
     let bts = buf.cuts(infoln)?;
     ruisutil::byte2struct(&mut info, &bts[..])?;
-    if (info.len_head) as u64 > super::MAX_HEADS {
+    if info.len_head as u64 > super::MAX_HEADS {
         return Err(ruisutil::ioerr("bytes2 out limit!!", None));
     }
-    if (info.len_body) as u64 > super::MAX_BODYS {
+    if info.len_body as u64 > super::MAX_BODYS {
         return Err(ruisutil::ioerr("bytes3 out limit!!", None));
     }
 

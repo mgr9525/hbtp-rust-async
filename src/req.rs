@@ -173,7 +173,7 @@ impl Request {
         let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.tmout);
         let bts = ruisutil::read_all_async(&ctx, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
-        if (info.len_head) as u64 > self.lmt_max.max_heads {
+        if info.len_head as u64 > self.lmt_max.max_heads {
             return Err(ruisutil::ioerr("bytes2 out limit!!", None));
         }
         let heads;

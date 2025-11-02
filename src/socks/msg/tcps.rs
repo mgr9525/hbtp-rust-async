@@ -27,10 +27,10 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
     let infoln = mem::size_of::<MsgInfo>();
     let bts = ruisutil::read_all_async(ctxs, conn, infoln).await?;
     ruisutil::byte2struct(&mut info, &bts[..])?;
-    if (info.len_head) as u64 > super::MAX_HEADS {
+    if info.len_head as u64 > super::MAX_HEADS {
         return Err(ruisutil::ioerr("bytes2 out limit!!", None));
     }
-    if (info.len_body) as u64 > super::MAX_BODYS {
+    if info.len_body as u64 > super::MAX_BODYS {
         return Err(ruisutil::ioerr("bytes3 out limit!!", None));
     }
 
@@ -85,10 +85,10 @@ pub async fn parse_steam_msg(ctxs: &ruisutil::Context,buf: &ByteSteamBuf) -> io:
     let infoln = mem::size_of::<MsgInfo>();
     let bts = buf.pull_size(Some(ctxs), infoln).await?.to_bytes();
     ruisutil::byte2struct(&mut info, &bts[..])?;
-    if (info.len_head) as u64 > super::MAX_HEADS {
+    if info.len_head as u64 > super::MAX_HEADS {
         return Err(ruisutil::ioerr("bytes2 out limit!!", None));
     }
-    if (info.len_body) as u64 > super::MAX_BODYS {
+    if info.len_body as u64 > super::MAX_BODYS {
         return Err(ruisutil::ioerr("bytes3 out limit!!", None));
     }
 
