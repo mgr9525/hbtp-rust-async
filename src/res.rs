@@ -62,7 +62,7 @@ impl<'a> Context {
         if (info.len_cmd as u64 + info.len_arg as u64) > cfg.max_ohther {
             return Err(ruisutil::ioerr("bytes1 out limit!!", None));
         }
-        if (info.len_head) as u64 > cfg.max_heads {
+        if info.len_head as u64 > cfg.max_heads {
             return Err(ruisutil::ioerr("bytes2 out limit!!", None));
         }
         if info.version >= 2 {
