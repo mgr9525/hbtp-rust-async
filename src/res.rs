@@ -59,7 +59,7 @@ impl<'a> Context {
             return Err(ruisutil::ioerr("not found version!", None));
         }
         let cfg = egn.get_lmt_max(info.control).await;
-        if (info.len_cmd + info.len_arg) as u64 > cfg.max_ohther {
+        if (info.len_cmd as u64 + info.len_arg as u64) > cfg.max_ohther {
             return Err(ruisutil::ioerr("bytes1 out limit!!", None));
         }
         if (info.len_head) as u64 > cfg.max_heads {
