@@ -48,12 +48,12 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
     let lnsz = info.len_head as usize;
     if lnsz > 0 {
         let bts = ruisutil::read_all_async(&ctxs, conn, lnsz as usize).await?;
-        rt.heads = Some(bytes::ByteBox::from(bts));
+        rt.heads = Some(bytes::Bytes::from(bts));
     }
     let lnsz = info.len_body as usize;
     if lnsz > 0 {
         let bts = ruisutil::read_all_async(&ctxs, conn, lnsz as usize).await?;
-        rt.bodys = Some(bytes::ByteBox::from(bts));
+        rt.bodys = super::msg::MsgBody::Bytes(bytes::Bytes::from(bts));
     }
     let bts = ruisutil::read_all_async(ctxs, conn, 2).await?;
     if bts.len() < 2 || bts[0] != 0x8eu8 || bts[1] != 0x8fu8 {
@@ -65,7 +65,7 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
 
     Ok(rt)
 }
-pub async fn parse_steam_msg(ctxs: &ruisutil::Context,buf: &ByteSteamBuf) -> io::Result<Message> {
+pub async fn parse_steam_msg(ctxs: &ruisutil::Context, buf: &ByteSteamBuf) -> io::Result<Message> {
     let bts = buf.pull_size(Some(ctxs), 1).await?.to_bytes();
     if bts.len() < 1 || bts[0] != 0x8du8 {
         return Err(ruisutil::ioerr(
@@ -106,13 +106,13 @@ pub async fn parse_steam_msg(ctxs: &ruisutil::Context,buf: &ByteSteamBuf) -> io:
     let lnsz = info.len_head as usize;
     if lnsz > 0 {
         let bts = buf.pull_size(Some(ctxs), lnsz).await?.to_bytes();
-        rt.heads = Some(bytes::ByteBox::from(bts));
+        rt.heads = Some(bytes::Bytes::from(bts));
     }
     let lnsz = info.len_body as usize;
     if lnsz > 0 {
         let bts = buf.pull_size(Some(ctxs), lnsz).await?;
         // rt.bodys = Some(bts.to_bytes());
-        rt.bodybuf = Some(bts);
+        rt.bodys = super::msg::MsgBody::BoxBuf(bts);
     }
     let bts = buf.pull_size(Some(ctxs), 2).await?.to_bytes();
     if bts.len() < 2 || bts[0] != 0x8eu8 || bts[1] != 0x8fu8 {
@@ -130,7 +130,7 @@ pub async fn send_msg(
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
-    hds: &Option<bytes::ByteBox>,
+    hds: &Option<bytes::Bytes>,
     bds: Option<&[u8]>,
 ) -> io::Result<()> {
     let mut info = MsgInfo::new();
@@ -170,7 +170,15 @@ pub async fn send_msgs(
     if let Some(buf) = &msg.bodybuf {
         send_msg_buf(ctxs, conn, msg.control, msg.cmds, &msg.heads, Some(buf)).await
     } else if let Some(bds) = &msg.bodys {
-        send_msg(ctxs, conn, msg.control, msg.cmds, &msg.heads, Some(&bds[..])).await
+        send_msg(
+            ctxs,
+            conn,
+            msg.control,
+            msg.cmds,
+            &msg.heads,
+            Some(&bds[..]),
+        )
+        .await
     } else {
         send_msg(ctxs, conn, msg.control, msg.cmds, &msg.heads, None).await
     }
@@ -180,7 +188,7 @@ pub async fn send_msg_buf(
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
-    hds: &Option<bytes::ByteBox>,
+    hds: &Option<bytes::Bytes>,
     bds: Option<&bytes::ByteBoxBuf>,
 ) -> io::Result<()> {
     let mut info = MsgInfo::new();
@@ -206,8 +214,7 @@ pub async fn send_msg_buf(
         ruisutil::write_all_async(ctxs, conn, &v[..]).await?;
     }
     if let Some(v) = bds {
-        let bts=v.to_byte_box();
-        ruisutil::write_all_async(ctxs, conn, &bts).await?;
+        ruisutil::write_allbuf_async(ctxs, conn, &v).await?;
     }
     ruisutil::write_all_async(ctxs, conn, &[0x8eu8, 0x8fu8]).await?;
     Ok(())

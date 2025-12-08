@@ -94,7 +94,7 @@ impl UdpMsgParse {
 
         false
     }
-    pub async fn ctrls(&self, buf: bytes::ByteBox, ctrl: u8, id: u8, ind: u16, ln: u16) {
+    pub async fn ctrls(&self, buf: bytes::Bytes, ctrl: u8, id: u8, ind: u16, ln: u16) {
         self.inner.ctmout.reset();
         match ctrl {
             //客户端请求发送
@@ -107,7 +107,7 @@ impl UdpMsgParse {
             _ => {}
         }
     }
-    pub async fn parse(&self, buf: bytes::ByteBox, id: u8, ind: u16, ln: u16) {
+    pub async fn parse(&self, buf: bytes::Bytes, id: u8, ind: u16, ln: u16) {
         if self.inner.curr == 0 {
             unsafe { self.inner.muts().curr = id };
         }
@@ -149,7 +149,7 @@ struct Inners {
     ln: u16,
     count: u16,
     tmout: ruisutil::Timer,
-    datas: RwLock<Vec<Option<bytes::ByteBox>>>,
+    datas: RwLock<Vec<Option<bytes::Bytes>>>,
 }
 impl UdpMsgMerge {
     pub fn new(ctx: &ruisutil::Context) -> Self {
@@ -170,7 +170,7 @@ impl UdpMsgMerge {
         unsafe { self.inner.muts().prt = Some(a) };
     }
 
-    pub async fn push(&self, buf: bytes::ByteBox, ind: u16, ln: u16) {
+    pub async fn push(&self, buf: bytes::Bytes, ind: u16, ln: u16) {
         let ins = unsafe { self.inner.muts() };
         if self.inner.finished || self.inner.ln != ln {
             {

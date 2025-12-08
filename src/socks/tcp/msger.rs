@@ -1,7 +1,7 @@
 use std::{io, sync::Arc, time::Duration};
 
 use ruisutil::asyncs::{make_channel, net::TcpStream, task, AsyncReadExt, Receiver, Sender};
-use ruisutil::bytes::{ByteBox, ByteSteamBuf};
+use ruisutil::bytes::ByteSteamBuf;
 
 use crate::socks::msg::{self, tcps};
 
@@ -126,13 +126,15 @@ impl Messager {
     async fn run_read(&self) -> io::Result<()> {
         let ins = unsafe { self.inner.muts() };
         loop {
-            let mut buf = vec![0u8; 4096].into_boxed_slice();
+            let mut buf = vec![0u8; 4096];
             let n = ruisutil::fut_tmout_ctxend0(&self.inner.ctx, ins.conn.read(&mut buf)).await?;
             if n <= 0 {
                 return Err(ruisutil::ioerr("read size=0 err!!", None));
             }
-            let bts = ByteBox::new(Arc::new(buf), 0, n);
-            self.inner.buf.push(bts).await?;
+            self.inner
+                .buf
+                .push(ruisutil::bytes::bytes_with_len(buf, n))
+                .await?;
         }
     }
     async fn run_parse(&self) -> io::Result<()> {

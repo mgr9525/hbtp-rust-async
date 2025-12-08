@@ -181,7 +181,7 @@ impl Request {
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
             let bts = ruisutil::read_all_async(&ctx, &mut conn, lnsz as usize).await?;
-            heads = Some(ruisutil::bytes::ByteBox::from(bts));
+            heads = Some(ruisutil::bytes::Bytes::from(bts));
         } else {
             heads = None;
         }
@@ -240,8 +240,8 @@ pub struct Inner {
     conn: Option<TcpStream>,
 
     code: i32,
-    heads: Option<ruisutil::bytes::ByteBox>,
-    bodys: Option<ruisutil::bytes::ByteBox>,
+    heads: Option<ruisutil::bytes::Bytes>,
+    bodys: Option<ruisutil::bytes::Bytes>,
     bodyok: AtomicBool,
     bodylen: usize,
 }
@@ -249,7 +249,7 @@ impl<'a> Response {
     fn new(
         conn: TcpStream,
         code: i32,
-        heads: Option<ruisutil::bytes::ByteBox>,
+        heads: Option<ruisutil::bytes::Bytes>,
         byln: usize,
     ) -> Self {
         Self {
@@ -280,13 +280,13 @@ impl<'a> Response {
     pub fn get_code(&self) -> i32 {
         self.inner.code
     }
-    pub fn get_heads(&self) -> &Option<ruisutil::bytes::ByteBox> {
+    pub fn get_heads(&self) -> &Option<ruisutil::bytes::Bytes> {
         &self.inner.heads
     }
     pub async fn get_bodys(
         &self,
         ctx: Option<&ruisutil::Context>,
-    ) -> &Option<ruisutil::bytes::ByteBox> {
+    ) -> &Option<ruisutil::bytes::Bytes> {
         if !self.inner.bodyok.load(Ordering::SeqCst) {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
@@ -297,7 +297,7 @@ impl<'a> Response {
                         Some(v) => v,
                     };
                     match ruisutil::read_all_async(ctxs, conn, self.inner.bodylen).await {
-                        Ok(bts) => ins.bodys = Some(ruisutil::bytes::ByteBox::from(bts)),
+                        Ok(bts) => ins.bodys = Some(ruisutil::bytes::Bytes::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
                     }
                 }

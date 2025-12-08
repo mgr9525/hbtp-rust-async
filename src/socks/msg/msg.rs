@@ -6,8 +6,8 @@ use ruisutil::bytes;
 pub struct Messages {
     pub control: i32,
     pub cmds: Option<String>,
-    pub heads: Option<bytes::ByteBox>,
-    pub bodys: Option<bytes::ByteBox>,
+    pub heads: Option<bytes::Bytes>,
+    pub bodys: Option<bytes::Bytes>,
     pub bodybuf: Option<Arc<bytes::ByteBoxBuf>>,
 }
 #[derive(Clone)]
@@ -15,9 +15,24 @@ pub struct Message {
     pub version: u16,
     pub control: i32,
     pub cmds: String,
-    pub heads: Option<bytes::ByteBox>,
-    pub bodys: Option<bytes::ByteBox>,
-    pub bodybuf: Option<bytes::ByteBoxBuf>,
+    pub heads: Option<bytes::Bytes>,
+    pub bodys: MsgBody,
+}
+
+#[derive(Clone)]
+pub enum MsgBody {
+    None,
+    Bytes(bytes::Bytes),
+    BoxBuf(bytes::ByteBoxBuf),
+}
+impl MsgBody {
+    pub fn len(&self) -> usize {
+        match self {
+            MsgBody::None => 0,
+            MsgBody::Bytes(v) => v.len(),
+            MsgBody::BoxBuf(v) => v.len(),
+        }
+    }
 }
 impl Message {
     pub fn new() -> Self {
@@ -26,23 +41,17 @@ impl Message {
             control: 0,
             cmds: String::new(),
             heads: None,
-            bodys: None,
-            bodybuf: None,
+            bodys: MsgBody::None,
         }
     }
-    pub fn own_bodys(&mut self) -> Option<bytes::ByteBox> {
-        std::mem::replace(&mut self.bodys, None)
+    pub fn own_bodys(&mut self) -> MsgBody {
+        std::mem::replace(&mut self.bodys, MsgBody::None)
     }
-    pub fn own_bodybuf(&mut self) -> Option<bytes::ByteBoxBuf> {
-        std::mem::replace(&mut self.bodybuf, None)
-    }
-    pub fn body_box(&self) -> Option<bytes::ByteBox> {
-        if let Some(v) = &self.bodys {
-            Some(v.clone())
-        } else if let Some(v) = &self.bodybuf {
-            Some(v.to_byte_box())
-        } else {
-            None
+    pub fn body_box(&self) -> Option<bytes::Bytes> {
+        match &self.bodys {
+            MsgBody::None => None,
+            MsgBody::Bytes(v) => Some(v.clone()),
+            MsgBody::BoxBuf(v) => Some(v.to_bytes()),
         }
     }
 }
@@ -50,16 +59,15 @@ impl Message {
 pub struct Messageus {
     pub control: i32,
     pub cmds: Option<String>,
-    pub heads: Option<bytes::ByteBox>,
-    pub bodys: Option<bytes::ByteBox>,
-    pub bodybuf: Option<bytes::ByteBoxBuf>,
+    pub heads: Option<bytes::Bytes>,
+    pub bodys: MsgBody,
 }
 pub struct Messageu {
     pub version: u16,
     pub control: i32,
     pub cmds: String,
-    pub heads: Option<bytes::ByteBox>,
-    pub bodys: Option<bytes::ByteBox>,
+    pub heads: Option<bytes::Bytes>,
+    pub bodys: Option<bytes::Bytes>,
 }
 impl Messageu {
     pub fn new() -> Self {

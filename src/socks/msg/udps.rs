@@ -1,13 +1,13 @@
 use std::{io, mem};
 
-use ruisutil::bytes;
+use ruisutil::bytes::{self, BytesCut};
 
 use super::{
     entity::{self, MsgInfo},
     Messageu, Messageus,
 };
 
-pub fn packet_parse(mut buf: bytes::ByteBox) -> io::Result<entity::UdpPackage> {
+pub fn packet_parse(mut buf: bytes::Bytes) -> io::Result<entity::UdpPackage> {
     let bts = buf.cuts(3)?;
     if bts[0] != 0x48 || bts[1] != 0x42 {
         return Err(ruisutil::ioerr(
@@ -55,7 +55,7 @@ pub fn packet_fmts(ctrl: u16, tks: &Option<String>) -> io::Result<bytes::ByteBox
     Ok(buf)
 }
 
-pub fn msg_parse(mut buf: bytes::ByteBox) -> io::Result<Messageu> {
+pub fn msg_parse(mut buf: bytes::Bytes) -> io::Result<Messageu> {
     let bts = buf.cuts(2)?;
     if bts[0] != 0x8e || bts[1] != 0x8f {
         return Err(ruisutil::ioerr(
@@ -109,11 +109,7 @@ pub fn msg_fmts(data: Messageus) -> io::Result<bytes::ByteBoxBuf> {
     if let Some(v) = &data.heads {
         info.len_head = v.len() as u32;
     }
-    if let Some(v) = &data.bodys {
-        info.len_body = v.len() as u32;
-    } else if let Some(v) = &data.bodybuf {
-        info.len_body = v.len() as u32;
-    }
+    info.len_body = data.bodys.len() as u32;
     buf.push(vec![0x8e, 0x8f]);
     let bts = ruisutil::struct2byte(&info).to_vec();
     buf.push(bts);
@@ -123,10 +119,14 @@ pub fn msg_fmts(data: Messageus) -> io::Result<bytes::ByteBoxBuf> {
     if let Some(v) = &data.heads {
         buf.push(v.clone());
     }
-    if let Some(v) = &data.bodys {
-        buf.push(v.clone());
-    } else if let Some(v) = &data.bodybuf {
-        buf.push_all(v);
+    match &data.bodys {
+        super::msg::MsgBody::Bytes(v) => {
+            buf.push(v.clone());
+        }
+        super::msg::MsgBody::BoxBuf(v) => {
+            buf.push_all(v);
+        }
+        _ => {}
     }
     Ok(buf)
 }

@@ -1,10 +1,10 @@
 use std::{collections::HashMap, io, net::SocketAddr, sync::Arc, time::Duration};
 
+use ruisutil::asyncs::BoxFuture;
 use ruisutil::asyncs::{
     net::{ToSocketAddrs, UdpSocket},
     sync::RwLock,
 };
-use ruisutil::asyncs::BoxFuture;
 use ruisutil::bytes;
 
 use crate::socks::msg;
@@ -102,7 +102,7 @@ impl UMsgerServ {
     async fn run_recv(&self) {
         while !self.inner.ctx.done() {
             if let Some(conn) = &self.inner.conn {
-                let mut buf = vec![0u8; 1500].into_boxed_slice();
+                let mut buf = vec![0u8; 1500];
                 match conn.recv_from(&mut buf[..]).await {
                     Err(e) => {
                         println!("udp_msger recv err:{}", e);
@@ -114,7 +114,7 @@ impl UMsgerServ {
                         if n <= 1472 {
                             let c = self.clone();
                             ruisutil::asyncs::task::spawn(async move {
-                                let bts = bytes::ByteBox::new(Arc::new(buf), 0, n);
+                                let bts = bytes::bytes_with_len(buf, n);
                                 if let Err(e) = c.run_parse(bts, src.clone()).await {
                                     println!("run_parse from {} err:{}", src.to_string(), e);
                                 }
@@ -127,7 +127,7 @@ impl UMsgerServ {
             }
         }
     }
-    async fn run_parse(&self, buf: bytes::ByteBox, src: SocketAddr) -> io::Result<()> {
+    async fn run_parse(&self, buf: bytes::Bytes, src: SocketAddr) -> io::Result<()> {
         /* if buf.len() < 10 {
             return Err(ruisutil::ioerr(format!("packet len err:{}",buf.len()), None));
         } */
@@ -231,7 +231,7 @@ impl UMsgerServ {
 
     pub async fn send1bts(
         &self,
-        data: bytes::ByteBox,
+        data: bytes::Bytes,
         tks: &Option<String>,
         dist: Option<&SocketAddr>,
     ) -> io::Result<()> {
@@ -275,7 +275,7 @@ impl UMsgerServ {
 pub trait IUMsgerServ {
     fn packet_err(&self, addrs: &SocketAddr) -> BoxFuture<'static, ()>;
     fn check_token(&self, addrs: &SocketAddr, tks: &Option<String>) -> BoxFuture<'static, bool>;
-    fn on_bts(&self, addrs: &SocketAddr, msg: bytes::ByteBox)
+    fn on_bts(&self, addrs: &SocketAddr, msg: bytes::Bytes)
         -> BoxFuture<'static, io::Result<()>>;
     fn on_msg(&self, addrs: &SocketAddr, msg: msg::Messageu) -> BoxFuture<'static, io::Result<()>>;
 }

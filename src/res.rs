@@ -19,8 +19,8 @@ struct Inner {
     ctrl: i32,
     cmds: String,
     args: Option<QString>,
-    heads: Option<ruisutil::bytes::ByteBox>,
-    bodys: Option<ruisutil::bytes::ByteBox>,
+    heads: Option<ruisutil::bytes::Bytes>,
+    bodys: Option<ruisutil::bytes::Bytes>,
     bodyok: Mutex<bool>,
     bodylen: usize,
 
@@ -97,7 +97,7 @@ impl<'a> Context {
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
             let bts = ruisutil::read_all_async(&ctxs, &mut conn, lnsz as usize).await?;
-            ins.heads = Some(ruisutil::bytes::ByteBox::from(bts));
+            ins.heads = Some(ruisutil::bytes::Bytes::from(bts));
         }
         /* let ctxs = ruisutil::Context::with_timeout(Some(ctx.clone()), lmt_tm.tm_bodys);
         let lnsz = info.len_body as usize;
@@ -189,13 +189,13 @@ impl<'a> Context {
             ins.args = Some(QString::new(vec![(name, value)]));
         }
     }
-    pub fn get_heads(&self) -> &Option<ruisutil::bytes::ByteBox> {
+    pub fn get_heads(&self) -> &Option<ruisutil::bytes::Bytes> {
         &self.inner.heads
     }
     pub async fn get_bodys(
         &self,
         ctx: Option<&ruisutil::Context>,
-    ) -> &Option<ruisutil::bytes::ByteBox> {
+    ) -> &Option<ruisutil::bytes::Bytes> {
         let mut lkv = self.inner.bodyok.lock().await;
         if !*lkv {
             if self.inner.bodylen > 0 {
@@ -207,7 +207,7 @@ impl<'a> Context {
                         Some(v) => v,
                     };
                     match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
-                        Ok(bts) => ins.bodys = Some(ruisutil::bytes::ByteBox::from(bts)),
+                        Ok(bts) => ins.bodys = Some(ruisutil::bytes::Bytes::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
                     }
                 }

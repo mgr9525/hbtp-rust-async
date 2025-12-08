@@ -27,5 +27,5 @@ impl MsgInfo {
 pub struct UdpPackage {
     pub ctrl: u16,
     pub token: Option<String>,
-    pub data: bytes::ByteBox,
+    pub data: bytes::Bytes,
 }
