@@ -241,7 +241,7 @@ impl Messager {
 
         // self.inner.recver.on_check().await;
         let c = self.clone();
-        let _ = ruisutil::timeoutios(Duration::from_secs(5), async move {
+        let _ = ruisutil::asyncs::timeouts(Duration::from_secs(5), async move {
             c.inner.recver.on_check().await;
             Ok(())
         })
