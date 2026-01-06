@@ -116,7 +116,7 @@ impl Request {
     async fn send(&mut self, hds: Option<&[u8]>, bds: Option<&[u8]>) -> io::Result<TcpStream> {
         let mut conn = if self.conn.is_none() {
             ruisutil::asyncs::timeouts(self.tmout.clone(), TcpStream::connect(self.addr.as_str()))
-                .await?
+                .await??
         } else {
             let rst = std::mem::replace(&mut self.conn, None);
             rst.ok_or(ruisutil::ioerr("panic?", None))?
@@ -246,12 +246,7 @@ pub struct Inner {
     bodylen: usize,
 }
 impl<'a> Response {
-    fn new(
-        conn: TcpStream,
-        code: i32,
-        heads: Option<ruisutil::bytes::Bytes>,
-        byln: usize,
-    ) -> Self {
+    fn new(conn: TcpStream, code: i32, heads: Option<ruisutil::bytes::Bytes>, byln: usize) -> Self {
         Self {
             inner: ruisutil::ArcMut::new(Inner {
                 conn: Some(conn),
