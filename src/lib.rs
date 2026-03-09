@@ -254,21 +254,26 @@ impl Engine {
     pub async fn run(&self) -> std::io::Result<()> {
         let lsr = TcpListener::bind(self.inner.addr.as_str()).await?;
         // let mut incom = lsr.accept();
-        loop {
-            match self.inner.ctx.wait_futs(lsr.accept()).await {
-                Err(e) => {
-                    println!("stream conn err:{}!!!!", e);
-                    break;
+        self.inner
+            .ctx
+            .wait_futs(async {
+                loop {
+                    match lsr.accept().await {
+                        Err(e) => {
+                            println!("stream conn err:{}!!!!", e);
+                            break;
+                        }
+                        Ok((conn, _)) => {
+                            let c = self.clone();
+                            task::spawn(async move {
+                                c.run_cli(conn).await;
+                            });
+                        }
+                    }
                 }
-                Ok((conn, _)) => {
-                    let c = self.clone();
-                    task::spawn(async move {
-                        c.run_cli(conn).await;
-                    });
-                }
-            }
-        }
-        Ok(())
+                Ok(())
+            })
+            .await
     }
     async fn run_cli(self, conn: TcpStream) {
         match Context::parse_conn(&self.inner.ctx, &self, conn).await {

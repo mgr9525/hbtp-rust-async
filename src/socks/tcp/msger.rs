@@ -125,17 +125,22 @@ impl Messager {
 
     async fn run_read(&self) -> io::Result<()> {
         let ins = unsafe { self.inner.muts() };
-        loop {
-            let mut buf = vec![0u8; 4096];
-            let n=self.inner.ctx.wait_futs(ins.conn.read(&mut buf)).await?;
-            if n <= 0 {
-                return Err(ruisutil::ioerr("read size=0 err!!", None));
-            }
-            self.inner
-                .buf
-                .push(ruisutil::bytes::bytes_with_len(buf, n))
-                .await?;
-        }
+        self.inner
+            .ctx
+            .wait_futs(async {
+                loop {
+                    let mut buf = vec![0u8; 4096];
+                    let n = ins.conn.read(&mut buf).await?;
+                    if n <= 0 {
+                        return Err(ruisutil::ioerr("read size=0 err!!", None));
+                    }
+                    self.inner
+                        .buf
+                        .push(ruisutil::bytes::bytes_with_len(buf, n))
+                        .await?;
+                }
+            })
+            .await
     }
     async fn run_parse(&self) -> io::Result<()> {
         loop {
@@ -191,17 +196,19 @@ impl Messager {
     }
     async fn run_send(&self) -> std::io::Result<()> {
         let ins = unsafe { self.inner.muts() };
-        loop {
-            let v = self.inner.ctx.wait_futs(
-                ruisutil::asyncs::channel_recv(&mut ins.msgs_rx),
-            )
-            .await?;
-            // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
-            if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
-                println!("run_send send_msgs err:{}", e);
-                ruisutil::asyncs::sleep(Duration::from_millis(10)).await;
-            }
-        }
+        self.inner
+            .ctx
+            .wait_futs(async {
+                loop {
+                    let v = ruisutil::asyncs::channel_recv(&mut ins.msgs_rx).await?;
+                    // println!("-------test-run_send: send_msgs start:ctrl={}", v.control);
+                    if let Err(e) = msg::tcps::send_msgs(&self.inner.ctx, &mut ins.conn, v).await {
+                        println!("run_send send_msgs err:{}", e);
+                        ruisutil::asyncs::sleep(Duration::from_millis(10)).await;
+                    }
+                }
+            })
+            .await
     }
     async fn run_check(&self) {
         /* println!(
