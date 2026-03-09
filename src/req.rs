@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::res::*;
 
 pub struct Request {
-    ctx: Option<ruisutil::Context>,
+    ctx: Option<ruisutil::asyncs::Context>,
     sended: bool,
     addr: String,
     conn: Option<TcpStream>,
@@ -144,7 +144,8 @@ impl Request {
             reqs.version = self.use_version;
         }
         let bts = ruisutil::struct2byte(&reqs);
-        let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_ohther);
+        let ctxp: ruisutil::asyncs::Context = (&self.ctx).into();
+        let ctx = ctxp.child_timeout(self.lmt_tm.tm_ohther);
         ruisutil::write_all_async(&ctx, &mut conn, bts).await?;
         if reqs.version >= 2 {
             ruisutil::write_all_async(&ctx, &mut conn, &[0x48, 0x42, 0x54, 0x50]).await?;
@@ -158,29 +159,30 @@ impl Request {
             ruisutil::write_all_async(&ctx, &mut conn, bts).await?;
         }
         if let Some(v) = hds {
-            let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_heads);
-            ruisutil::write_all_async(&ctx, &mut conn, v).await?;
+            let ctxs = ctxp.child_timeout(self.lmt_tm.tm_heads);
+            ruisutil::write_all_async(&ctxs, &mut conn, v).await?;
         }
         if let Some(v) = bds {
-            let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_bodys);
-            ruisutil::write_all_async(&ctx, &mut conn, v).await?;
+            let ctxs = ctxp.child_timeout(self.lmt_tm.tm_bodys);
+            ruisutil::write_all_async(&ctxs, &mut conn, v).await?;
         }
         Ok(conn)
     }
     async fn response(&self, mut conn: TcpStream) -> io::Result<Response> {
         let mut info = ResInfoV1::new();
         let infoln = mem::size_of::<ResInfoV1>();
-        let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.tmout);
+        let ctxp: ruisutil::asyncs::Context = (&self.ctx).into();
+        let ctx = ctxp.child_timeout(self.tmout);
         let bts = ruisutil::read_all_async(&ctx, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
         if info.len_head as u64 > self.lmt_max.max_heads {
             return Err(ruisutil::ioerr("bytes2 out limit!!", None));
         }
         let heads;
-        let ctx = ruisutil::Context::with_timeout(self.ctx.clone(), self.lmt_tm.tm_heads);
+        let ctxs = ctxp.child_timeout(self.lmt_tm.tm_heads);
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
-            let bts = ruisutil::read_all_async(&ctx, &mut conn, lnsz as usize).await?;
+            let bts = ruisutil::read_all_async(&ctxs, &mut conn, lnsz as usize).await?;
             heads = Some(ruisutil::bytes::Bytes::from(bts));
         } else {
             heads = None;
@@ -265,7 +267,7 @@ impl<'a> Response {
         panic!("conn?");
     }
     pub async fn own_conn(&self) -> TcpStream {
-        self.get_bodys(None).await;
+        self.get_bodys(&None).await;
         let ins = unsafe { self.inner.muts() };
         if let Some(v) = std::mem::replace(&mut ins.conn, None) {
             return v;
@@ -280,18 +282,14 @@ impl<'a> Response {
     }
     pub async fn get_bodys(
         &self,
-        ctx: Option<&ruisutil::Context>,
+        ctx: &Option<ruisutil::asyncs::Context>,
     ) -> &Option<ruisutil::bytes::Bytes> {
         if !self.inner.bodyok.load(Ordering::SeqCst) {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
-                    let ctxc = ruisutil::Context::background(None);
-                    let ctxs = match ctx {
-                        None => &ctxc,
-                        Some(v) => v,
-                    };
-                    match ruisutil::read_all_async(ctxs, conn, self.inner.bodylen).await {
+                    let ctxs = ctx.into();
+                    match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
                         Ok(bts) => ins.bodys = Some(ruisutil::bytes::Bytes::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
                     }
@@ -314,7 +312,7 @@ impl<'a> Response {
         }
     }
     pub async fn body_json<T: Deserialize<'a>>(&'a self) -> io::Result<T> {
-        match self.get_bodys(None).await {
+        match self.get_bodys(&None).await {
             None => Err(ruisutil::ioerr("bodys nil", None)),
             Some(v) => match serde_json::from_slice(v) {
                 Ok(vs) => Ok(vs),
@@ -323,7 +321,7 @@ impl<'a> Response {
         }
     }
     pub async fn body_str(&self) -> io::Result<String> {
-        match self.get_bodys(None).await {
+        match self.get_bodys(&None).await {
             None => Err(ruisutil::ioerr("bodys nil", None)),
             Some(v) => match std::str::from_utf8(v) {
                 Ok(vs) => Ok(vs.to_string()),

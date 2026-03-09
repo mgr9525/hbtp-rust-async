@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.cargo.features": [
+        "tokios"
+    ],
+    "rust-analyzer.cargo.noDefaultFeatures": true
+}

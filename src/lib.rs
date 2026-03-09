@@ -137,7 +137,7 @@ mod tests {
                 Err(e) => println!("do err:{}", e),
                 Ok(res) => {
                     println!("res code:{}", res.get_code());
-                    if let Some(bs) = res.get_bodys(None).await {
+                    if let Some(bs) = res.get_bodys(&None).await {
                         println!("res data:{}", std::str::from_utf8(&bs[..]).unwrap())
                     }
                 }
@@ -150,15 +150,6 @@ mod tests {
         qs.add_pair(("haha", "hehe"));
         let val = qs.get("foo").unwrap();
         println!("val:{},s:{}", val, qs.to_string());
-    }
-    #[test]
-    fn ctx_test() {
-        let ctx = ruisutil::Context::with_timeout(None, Duration::from_secs(5));
-        while !ctx.done() {
-            println!("running");
-            thread::sleep(Duration::from_millis(500));
-        }
-        println!("end!!!");
     }
     #[test]
     fn arrmps() {
@@ -206,7 +197,7 @@ pub struct Engine {
     inner: ruisutil::ArcMut<Inner>,
 }
 struct Inner {
-    ctx: ruisutil::Context,
+    ctx: ruisutil::asyncs::Context,
     lmt_tm: LmtTmConfig,
     lmt_max: LmtMaxConfig,
     fns: RwLock<HashMap<i32, Vec<AsyncFnPtr>>>,
@@ -219,7 +210,7 @@ struct Inner {
 // unsafe impl Sync for AsyncFnPtr {}
 impl Drop for Inner {
     fn drop(&mut self) {
-        self.ctx.stop();
+        self.ctx.cancel();
         //self.lsr.
     }
 }
@@ -227,10 +218,10 @@ impl Engine {
     pub fn new(addr: &str) -> Self {
         Self::newctx(None, addr)
     }
-    pub fn newctx(ctx: Option<ruisutil::Context>, addr: &str) -> Self {
+    pub fn newctx(ctx: Option<ruisutil::asyncs::Context>, addr: &str) -> Self {
         Self {
             inner: ruisutil::ArcMut::new(Inner {
-                ctx: ruisutil::Context::background(ctx),
+                ctx: ctx.into(),
                 fns: RwLock::new(HashMap::new()),
                 lmts: RwLock::new(HashMap::new()),
                 addr: String::from(addr),
@@ -258,13 +249,13 @@ impl Engine {
     }
 
     pub fn stop(&self) {
-        self.inner.ctx.stop();
+        self.inner.ctx.cancel();
     }
     pub async fn run(&self) -> std::io::Result<()> {
         let lsr = TcpListener::bind(self.inner.addr.as_str()).await?;
         // let mut incom = lsr.accept();
-        while !self.inner.ctx.done() {
-            match ruisutil::fut_tmout_ctxend0(&self.inner.ctx, lsr.accept()).await {
+        loop {
+            match self.inner.ctx.wait_futs(lsr.accept()).await {
                 Err(e) => {
                     println!("stream conn err:{}!!!!", e);
                     break;

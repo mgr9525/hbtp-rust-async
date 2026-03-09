@@ -45,14 +45,14 @@ impl<'a> Context {
     }
 
     pub(crate) async fn parse_conn(
-        ctx: &ruisutil::Context,
+        ctx: &ruisutil::asyncs::Context,
         egn: &crate::Engine,
         mut conn: TcpStream,
     ) -> io::Result<Self> {
         let mut info = MsgInfo::new();
         let infoln = std::mem::size_of::<MsgInfo>();
         let lmt_tm = egn.get_lmt_tm().await;
-        let ctxs = ruisutil::Context::with_timeout(Some(ctx.clone()), lmt_tm.tm_ohther);
+        let ctxs=ctx.child_timeout(lmt_tm.tm_ohther);
         let bts = ruisutil::read_all_async(&ctxs, &mut conn, infoln).await?;
         ruisutil::byte2struct(&mut info, &bts[..])?;
         if info.version < 1 && info.version > 2 {
@@ -93,7 +93,7 @@ impl<'a> Context {
             };
             ins.args = Some(QString::from(args.as_str()));
         }
-        let ctxs = ruisutil::Context::with_timeout(Some(ctx.clone()), lmt_tm.tm_heads);
+        let ctxs=ctx.child_timeout(lmt_tm.tm_heads);
         let lnsz = info.len_head as usize;
         if lnsz > 0 {
             let bts = ruisutil::read_all_async(&ctxs, &mut conn, lnsz as usize).await?;
@@ -128,7 +128,7 @@ impl<'a> Context {
         panic!("conn?");
     } */
     pub async fn own_conn(&self) -> TcpStream {
-        self.get_bodys(None).await;
+        self.get_bodys(&None).await;
         let ins = unsafe { self.inner.muts() };
         if let Some(v) = std::mem::replace(&mut ins.conn, None) {
             return v;
@@ -194,18 +194,19 @@ impl<'a> Context {
     }
     pub async fn get_bodys(
         &self,
-        ctx: Option<&ruisutil::Context>,
+        ctx: &Option<ruisutil::asyncs::Context>,
     ) -> &Option<ruisutil::bytes::Bytes> {
         let mut lkv = self.inner.bodyok.lock().await;
         if !*lkv {
             if self.inner.bodylen > 0 {
                 let ins = unsafe { self.inner.muts() };
                 if let Some(conn) = &mut ins.conn {
-                    let ctxc = ruisutil::Context::background(None);
+                    /* let ctxc = ruisutil::asyncs::Context::new();
                     let ctxs = match ctx {
                         None => &ctxc,
                         Some(v) => v,
-                    };
+                    }; */
+                    let ctxs=ctx.into();
                     match ruisutil::read_all_async(&ctxs, conn, self.inner.bodylen).await {
                         Ok(bts) => ins.bodys = Some(ruisutil::bytes::Bytes::from(bts)),
                         Err(e) => println!("get_bodys tcp read err:{}", e),
@@ -232,7 +233,7 @@ impl<'a> Context {
         }
     }
     pub async fn body_json<T: Deserialize<'a>>(&'a self) -> io::Result<T> {
-        match self.get_bodys(None).await {
+        match self.get_bodys(&None).await {
             None => Err(ruisutil::ioerr("bodys nil", None)),
             Some(v) => match serde_json::from_slice(v) {
                 Ok(vs) => Ok(vs),
@@ -241,7 +242,7 @@ impl<'a> Context {
         }
     }
     pub async fn body_str(&self) -> io::Result<String> {
-        match self.get_bodys(None).await {
+        match self.get_bodys(&None).await {
             None => Err(ruisutil::ioerr("bodys nil", None)),
             Some(v) => match std::str::from_utf8(v) {
                 Ok(vs) => Ok(vs.to_string()),
@@ -278,15 +279,15 @@ impl<'a> Context {
         }
         if let Some(conn) = &mut ins.conn {
             let bts = ruisutil::struct2byte(&res);
-            let ctx = ruisutil::Context::with_timeout(None, Duration::from_secs(10));
+            let ctx=ruisutil::asyncs::Context::new_timeout(Duration::from_secs(10));
             ruisutil::write_all_async(&ctx, conn, bts).await?;
             if let Some(v) = hds {
-                let ctx = ruisutil::Context::with_timeout(None, Duration::from_secs(20));
-                ruisutil::write_all_async(&ctx, conn, v).await?;
+                let ctxs=ctx.child_timeout(Duration::from_secs(20));
+                ruisutil::write_all_async(&ctxs, conn, v).await?;
             }
             if let Some(v) = bds {
-                let ctx = ruisutil::Context::with_timeout(None, Duration::from_secs(30));
-                ruisutil::write_all_async(&ctx, conn, v).await?;
+                let ctxs=ctx.child_timeout(Duration::from_secs(30));
+                ruisutil::write_all_async(&ctxs, conn, v).await?;
             }
         } else {
             return Err(ruisutil::ioerr("not found conn", None));

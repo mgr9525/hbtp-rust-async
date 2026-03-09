@@ -7,7 +7,7 @@ use crate::socks::msg::entity::MsgInfo;
 
 use super::{Message, Messages};
 
-pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Result<Message> {
+pub async fn parse_msg(ctxs: &ruisutil::asyncs::Context, conn: &mut TcpStream) -> io::Result<Message> {
     let bts = ruisutil::read_all_async(ctxs, conn, 1).await?;
     if bts.len() < 1 || bts[0] != 0x8du8 {
         return Err(ruisutil::ioerr(
@@ -65,7 +65,7 @@ pub async fn parse_msg(ctxs: &ruisutil::Context, conn: &mut TcpStream) -> io::Re
 
     Ok(rt)
 }
-pub async fn parse_steam_msg(ctxs: &ruisutil::Context, buf: &ByteSteamBuf) -> io::Result<Message> {
+pub async fn parse_steam_msg(ctxs: &ruisutil::asyncs::Context, buf: &ByteSteamBuf) -> io::Result<Message> {
     let bts = buf.pull_size(Some(ctxs), 1).await?.to_bytes();
     if bts.len() < 1 || bts[0] != 0x8du8 {
         return Err(ruisutil::ioerr(
@@ -126,7 +126,7 @@ pub async fn parse_steam_msg(ctxs: &ruisutil::Context, buf: &ByteSteamBuf) -> io
 }
 
 pub async fn send_msg(
-    ctxs: &ruisutil::Context,
+    ctxs: &ruisutil::asyncs::Context,
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
@@ -163,7 +163,7 @@ pub async fn send_msg(
 }
 
 pub async fn send_msgs(
-    ctxs: &ruisutil::Context,
+    ctxs: &ruisutil::asyncs::Context,
     conn: &mut TcpStream,
     msg: Messages,
 ) -> io::Result<()> {
@@ -184,7 +184,7 @@ pub async fn send_msgs(
     }
 }
 pub async fn send_msg_buf(
-    ctxs: &ruisutil::Context,
+    ctxs: &ruisutil::asyncs::Context,
     conn: &mut TcpStream,
     ctrl: i32,
     cmds: Option<String>,
