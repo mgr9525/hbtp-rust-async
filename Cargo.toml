@@ -16,7 +16,7 @@ qstring = {git="https://github.com/mgr9525/qstring.git", rev="1523f04f0e1b50e0b2
 
 async-std = {version="1", optional = true}
 tokio = { version = "1", features = ["full"], optional = true }
-ruisutil={git="https://github.com/mgr9525/rust-ruisutil.git", rev="c898f9d20343b154d7bce37db18b577025d2d71a",optional = true}
+ruisutil={git="https://github.com/mgr9525/rust-ruisutil.git", rev="7b817b6eba80799443e50ddfa1b102bdccb8e288",optional = true}
 # ruisutil={path="../rust-ruisutil",optional = true}
 
 
